@@ -1,6 +1,15 @@
+# C binary objects
+*.o
+
 # Python byte-code and cache
 __pycache__/
 *.py[cod]
 
-# PyCharm project files
+
+# PyCharm projects
 .idea/
+
+# XCode projects
+*.pbxuser
+!default.pbxuser
+xcuserdata/

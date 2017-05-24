@@ -1,0 +1,264 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		79EF42E51EBE91DB007D0ECB /* telemetry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 79EF42CC1EBE8F77007D0ECB /* telemetry.cpp */; };
+		79EF42EB1EBE9C13007D0ECB /* libtelemetry.so in CopyFiles */ = {isa = PBXBuildFile; fileRef = 79EF42E11EBE91D6007D0ECB /* libtelemetry.so */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		79EF42E81EBE9BC4007D0ECB /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = "$(HOME)/Library/Application Support/Steam/steamapps/common/American Truck Simulator/American Truck Simulator.app/Contents/MacOS/plugins";
+			dstSubfolderSpec = 0;
+			files = (
+				79EF42EB1EBE9C13007D0ECB /* libtelemetry.so in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		79EF42CC1EBE8F77007D0ECB /* telemetry.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = telemetry.cpp; sourceTree = "<group>"; };
+		79EF42E11EBE91D6007D0ECB /* libtelemetry.so */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libtelemetry.so; sourceTree = BUILT_PRODUCTS_DIR; };
+		79EF42EC1EC16940007D0ECB /* telemetry.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = telemetry.hpp; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		79EF42B81EBE8F2E007D0ECB = {
+			isa = PBXGroup;
+			children = (
+				79EF42CB1EBE8F69007D0ECB /* Source */,
+				79EF42C21EBE8F2E007D0ECB /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		79EF42C21EBE8F2E007D0ECB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				79EF42E11EBE91D6007D0ECB /* libtelemetry.so */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		79EF42CB1EBE8F69007D0ECB /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				79EF42EC1EC16940007D0ECB /* telemetry.hpp */,
+				79EF42CC1EBE8F77007D0ECB /* telemetry.cpp */,
+			);
+			name = Source;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		79EF42E01EBE91D6007D0ECB /* telemetry */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 79EF42E21EBE91D6007D0ECB /* Build configuration list for PBXNativeTarget "telemetry" */;
+			buildPhases = (
+				79EF42DD1EBE91D6007D0ECB /* Sources */,
+				79EF42E81EBE9BC4007D0ECB /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = telemetry;
+			productName = telemetry;
+			productReference = 79EF42E11EBE91D6007D0ECB /* libtelemetry.so */;
+			productType = "com.apple.product-type.library.dynamic";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		79EF42B91EBE8F2E007D0ECB /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0830;
+				ORGANIZATIONNAME = "Vojta Molda";
+				TargetAttributes = {
+					79EF42E01EBE91D6007D0ECB = {
+						CreatedOnToolsVersion = 8.3.1;
+						DevelopmentTeam = ALN2GRZBKC;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 79EF42BC1EBE8F2E007D0ECB /* Build configuration list for PBXProject "telemetry" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 79EF42B81EBE8F2E007D0ECB;
+			productRefGroup = 79EF42C21EBE8F2E007D0ECB /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				79EF42E01EBE91D6007D0ECB /* telemetry */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		79EF42DD1EBE91D6007D0ECB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				79EF42E51EBE91DB007D0ECB /* telemetry.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		79EF42C61EBE8F2E007D0ECB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = ./scssdk/include;
+				INSTALL_MODE_FLAG = "";
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		79EF42C71EBE8F2E007D0ECB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = ./scssdk/include;
+				INSTALL_MODE_FLAG = "";
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		79EF42E31EBE91D6007D0ECB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_EXTENSION = so;
+				EXECUTABLE_PREFIX = lib;
+				INSTALL_MODE_FLAG = "u+w,go-w,a+r";
+				INSTALL_PATH = "$(HOME)/Library/Application Support/Steam/steamapps/common/American Truck Simulator/American Truck Simulator.app/Contents/MacOS/plugins/";
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				PRODUCT_NAME = telemetry;
+			};
+			name = Debug;
+		};
+		79EF42E41EBE91D6007D0ECB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_EXTENSION = so;
+				EXECUTABLE_PREFIX = lib;
+				INSTALL_MODE_FLAG = "u+w,go-w,a+r";
+				INSTALL_PATH = "$(HOME)/Library/Application Support/Steam/steamapps/common/American Truck Simulator/American Truck Simulator.app/Contents/MacOS/plugins/";
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				PRODUCT_NAME = telemetry;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		79EF42BC1EBE8F2E007D0ECB /* Build configuration list for PBXProject "telemetry" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				79EF42C61EBE8F2E007D0ECB /* Debug */,
+				79EF42C71EBE8F2E007D0ECB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		79EF42E21EBE91D6007D0ECB /* Build configuration list for PBXNativeTarget "telemetry" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				79EF42E31EBE91D6007D0ECB /* Debug */,
+				79EF42E41EBE91D6007D0ECB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 79EF42B91EBE8F2E007D0ECB /* Project object */;
+}
