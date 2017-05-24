@@ -1,0 +1,4 @@
+[submodule "cppzmq"]
+	path = telemetry/cppzmq
+	url = https://github.com/zeromq/cppzmq.git
+
