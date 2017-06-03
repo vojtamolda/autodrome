@@ -3,51 +3,19 @@
 
 Telemetry::Telemetry(const scs_telemetry_init_params_v100_t *const params) :
     paused(true), game_log(params->common.log),
-
-    world_placement{.position={.x=0.0, .y=0.0, .z=0.0},
-                    .orientation={.heading=0.0, .pitch=0.0, .roll=0.0}, SCS_U32_NIL},
-    local_linear_velocity{.x=0.0, .y=0.0, .z=0.0},
-    local_angular_velocity{.x=0.0, .y=0.0, .z=0.0},
-    speed{0.0},
-
-    render_time(0), simulation_time(0), paused_simulation_time(0)
+    zmq_context(1), zmq_publisher(zmq_context, ZMQ_PUB),
+    packet()
 {
-	if (params->register_for_event(SCS_TELEMETRY_EVENT_configuration, Telemetry::configuration_callback, this) != SCS_RESULT_ok) {
-	    this->log("Unable to register 'configuration' event callback", SCS_LOG_TYPE_error);
-	}
-	if (params->register_for_event(SCS_TELEMETRY_EVENT_started, Telemetry::start_callback, this) != SCS_RESULT_ok) {
-	    this->log("Unable to register 'started' event callback", SCS_LOG_TYPE_error);
-	}
-	if (params->register_for_event(SCS_TELEMETRY_EVENT_frame_start, Telemetry::frame_start_callback, this) != SCS_RESULT_ok) {
-	    this->log("Unable to register 'frame_start' event callback", SCS_LOG_TYPE_error);
-	}
-	if (params->register_for_event(SCS_TELEMETRY_EVENT_frame_end, Telemetry::frame_end_callback, this) != SCS_RESULT_ok) {
-	    this->log("Unable to register 'frame_end' event callback", SCS_LOG_TYPE_error);
-	}
-	if (params->register_for_event(SCS_TELEMETRY_EVENT_paused, Telemetry::pause_callback, this) != SCS_RESULT_ok) {
-	    this->log("Unable to register 'paused' event callback", SCS_LOG_TYPE_error);
-	}
+    this->register_event(params, SCS_TELEMETRY_EVENT_configuration, Telemetry::configuration_callback);
+    this->register_event(params, SCS_TELEMETRY_EVENT_started, Telemetry::start_callback);
+    this->register_event(params, SCS_TELEMETRY_EVENT_frame_start, Telemetry::frame_start_callback);
+    this->register_event(params, SCS_TELEMETRY_EVENT_frame_end, Telemetry::frame_end_callback);
+    this->register_event(params, SCS_TELEMETRY_EVENT_paused, Telemetry::pause_callback);
 
-	if (params->register_for_channel(SCS_TELEMETRY_TRUCK_CHANNEL_world_placement, SCS_U32_NIL, SCS_VALUE_TYPE_dplacement,
-	            SCS_TELEMETRY_CHANNEL_FLAG_none, Telemetry::channel_update, &(this->world_placement)) != SCS_RESULT_ok) {
-	    string message = "Unable to register for '" + string(SCS_TELEMETRY_TRUCK_CHANNEL_world_placement) + "' channel update";
-	    this->log(message.c_str(), SCS_LOG_TYPE_error);
-	}
-	if (params->register_for_channel(SCS_TELEMETRY_TRUCK_CHANNEL_local_linear_velocity, SCS_U32_NIL, SCS_VALUE_TYPE_dvector,
-	            SCS_TELEMETRY_CHANNEL_FLAG_none, Telemetry::channel_update, &(this->local_linear_velocity)) != SCS_RESULT_ok) {
-	    string message = "Unable to register for '" + string(SCS_TELEMETRY_TRUCK_CHANNEL_local_linear_velocity) + "' channel update";
-	    this->log(message.c_str(), SCS_LOG_TYPE_error);
-	}
-	if (params->register_for_channel(SCS_TELEMETRY_TRUCK_CHANNEL_local_angular_velocity, SCS_U32_NIL, SCS_VALUE_TYPE_dvector,
-	            SCS_TELEMETRY_CHANNEL_FLAG_none, Telemetry::channel_update, &(this->local_angular_velocity)) != SCS_RESULT_ok) {
-	    string message = "Unable to register for '" + string(SCS_TELEMETRY_TRUCK_CHANNEL_local_angular_velocity) + "' channel update";
-	    this->log(message.c_str(), SCS_LOG_TYPE_error);
-	}
-	if (params->register_for_channel(SCS_TELEMETRY_TRUCK_CHANNEL_speed, SCS_U32_NIL, SCS_VALUE_TYPE_double,
-	            SCS_TELEMETRY_CHANNEL_FLAG_none, Telemetry::channel_update, &(this->speed)) != SCS_RESULT_ok) {
-	    string message = "Unable to register for '" + string(SCS_TELEMETRY_TRUCK_CHANNEL_speed) + "' channel update";
-	    this->log(message.c_str(), SCS_LOG_TYPE_error);
-	}
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_world_placement, SCS_VALUE_TYPE_dplacement, &(this->packet.placement));
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_local_linear_velocity, SCS_VALUE_TYPE_dvector, &(this->packet.linear_velocity));
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_local_angular_velocity, SCS_VALUE_TYPE_dvector, &(this->packet.angular_velocity));
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_speed, SCS_VALUE_TYPE_double, &(this->packet.speed));
 	// SCS_TELEMETRY_TRUCK_CHANNEL_effective_steering
 	// SCS_TELEMETRY_TRUCK_CHANNEL_effective_throttle
 	// SCS_TELEMETRY_TRUCK_CHANNEL_effective_brake
@@ -55,10 +23,12 @@ Telemetry::Telemetry(const scs_telemetry_init_params_v100_t *const params) :
 	// SCS_TELEMETRY_TRUCK_CHANNEL_lblinker
 	// SCS_TELEMETRY_TRUCK_CHANNEL_rblinker
 	// SCS_TELEMETRY_TRUCK_CHANNEL_navigation_speed_limit
+    
+    this->zmq_publisher.bind("tcp://*:5680");
 }
 
 void Telemetry::configuration(const struct scs_telemetry_configuration_t *const configuration_info) {
-
+    // Working hard...
 }
 
 void Telemetry::start() {
@@ -66,15 +36,16 @@ void Telemetry::start() {
 }
 
 void Telemetry::frame_start(const struct scs_telemetry_frame_start_t *const frame_start_info) {
-    this->render_time = frame_start_info->render_time;
-    this->simulation_time = frame_start_info->simulation_time;
-    this->paused_simulation_time = frame_start_info->paused_simulation_time;
+    this->packet.render_time = frame_start_info->render_time;
+    this->packet.simulation_time = frame_start_info->simulation_time;
+    this->packet.paused_simulation_time = frame_start_info->paused_simulation_time;
 }
 
 void Telemetry::frame_end() {
 	if (this->paused) return;
 
-    // TODO: Publish the fresh telemetry data here...
+	message_t message(&(this->packet), sizeof(this->packet));
+    this->zmq_publisher.send(message);
 }
 
 void Telemetry::pause() {
@@ -105,9 +76,24 @@ SCSAPI_VOID Telemetry::pause_callback(const scs_event_t event, const void *const
 
 SCSAPI_VOID Telemetry::channel_update(const scs_string_t name, const scs_u32_t index, const scs_value_t *const value, const scs_context_t context) {
     switch (value->type) {
+        case SCS_VALUE_TYPE_string: {
+            scs_string_t *const storage = static_cast<scs_string_t *>(context);
+            *storage = value->value_string.value;
+            break;
+        }
         case SCS_VALUE_TYPE_dplacement: {
             scs_value_dplacement_t *const storage = static_cast<scs_value_dplacement_t *>(context);
             *storage = value->value_dplacement;
+            break;
+        }
+        case SCS_VALUE_TYPE_fplacement: {
+            scs_value_fplacement_t *const storage = static_cast<scs_value_fplacement_t *>(context);
+            *storage = value->value_fplacement;
+            break;
+        }
+        case SCS_VALUE_TYPE_euler: {
+            scs_value_euler_t *const storage = static_cast<scs_value_euler_t *>(context);
+            *storage = value->value_euler;
             break;
         }
         case SCS_VALUE_TYPE_dvector: {
@@ -115,13 +101,34 @@ SCSAPI_VOID Telemetry::channel_update(const scs_string_t name, const scs_u32_t i
             *storage = value->value_dvector;
             break;
         }
-        case SCS_VALUE_TYPE_double: {
-            scs_value_double_t *const storage = static_cast<scs_value_double_t *>(context);
-            *storage = value->value_double;
+        case SCS_VALUE_TYPE_fvector: {
+            scs_value_fvector_t *const storage = static_cast<scs_value_fvector_t *>(context);
+            *storage = value->value_fvector;
             break;
         }
-        default: {
-            // There's no easy way to complain into the this->log from here... :-(
+        case SCS_VALUE_TYPE_double: {
+            scs_double_t *const storage = static_cast<scs_double_t *>(context);
+            *storage = value->value_double.value;
+            break;
+        }
+        case SCS_VALUE_TYPE_u64: {
+            scs_u64_t *const storage = static_cast<scs_u64_t *>(context);
+            *storage = value->value_u64.value;
+            break;
+        }
+        case SCS_VALUE_TYPE_u32: {
+            scs_u32_t *const storage = static_cast<scs_u32_t *>(context);
+            *storage = value->value_u32.value;
+            break;
+        }
+        case SCS_VALUE_TYPE_s32: {
+            scs_s32_t *const storage = static_cast<scs_s32_t *>(context);
+            *storage = value->value_s32.value;
+            break;
+        }
+        case SCS_VALUE_TYPE_bool: {
+            scs_u8_t *const storage = static_cast<scs_u8_t *>(context);
+            *storage = value->value_bool.value;
             break;
         }
     }
@@ -140,12 +147,12 @@ bool Telemetry::compatible_version(const scs_telemetry_init_params_v100_t *const
 	if (string(SCS_GAME_ID_EUT2) == params->common.game_id) {
 		const scs_u32_t MINIMAL_VERSION = SCS_TELEMETRY_EUT2_GAME_VERSION_1_00;
 		if (params->common.game_version < MINIMAL_VERSION) {
-			params->common.log(SCS_LOG_TYPE_error, "Incompatible (old) version of the game. Please update the game.");
+            params->common.log(SCS_LOG_TYPE_error, "[telemetry] : incompatible (old) version of the game, please, update the game.");
 			return false;
 		}
 		const scs_u32_t IMPLEMENTED_VERSION = SCS_TELEMETRY_EUT2_GAME_VERSION_CURRENT;
 		if (SCS_GET_MAJOR_VERSION(params->common.game_version) > SCS_GET_MAJOR_VERSION(IMPLEMENTED_VERSION)) {
-		    params->common.log(SCS_LOG_TYPE_error, "Incompatible (old) version of the telemetry SDK. Please update the SDK.");
+            params->common.log(SCS_LOG_TYPE_error, "[telemetry] : incompatible (old) version of the telemetry SDK, please, update the SDK.");
 			return false;
 		}
 	}
@@ -153,18 +160,34 @@ bool Telemetry::compatible_version(const scs_telemetry_init_params_v100_t *const
 	if (string(SCS_GAME_ID_ATS) == params->common.game_id) {
 		const scs_u32_t MINIMAL_VERSION = SCS_TELEMETRY_ATS_GAME_VERSION_1_00;
 		if (params->common.game_version < MINIMAL_VERSION) {
-			params->common.log(SCS_LOG_TYPE_error, "Incompatible (old) version of the game. Please update the game.");
+			params->common.log(SCS_LOG_TYPE_error, "[telemetry] : incompatible (old) version of the game, please, update the game.");
 			return false;
 		}
 		const scs_u32_t IMPLEMENTED_VERSION = SCS_TELEMETRY_ATS_GAME_VERSION_CURRENT;
 		if (SCS_GET_MAJOR_VERSION(params->common.game_version) > SCS_GET_MAJOR_VERSION(IMPLEMENTED_VERSION)) {
-		    params->common.log(SCS_LOG_TYPE_error, "Incompatible (old) version of the telemetry SDK. Please update the SDK.");
+		    params->common.log(SCS_LOG_TYPE_error, "[telemetry] : incompatible (old) version of the telemetry SDK, please, update the SDK.");
         return false;
 		}
 	}
 	return true;
 }
 
+bool Telemetry::register_event(const scs_telemetry_init_params_v100_t *const params, const scs_event_t event, const scs_telemetry_event_callback_t callback) {
+	if (params->register_for_event(event, callback, this) != SCS_RESULT_ok) {
+	    string message = "[telemetry] : unable to register for scs_event_t=" + to_string(event) + " event callback.";
+	    return false;
+	}
+	return true;
+}
+
+bool Telemetry::register_channel(const scs_telemetry_init_params_v100_t *const params, const scs_string_t name, const scs_value_type_t type, const scs_context_t context) {
+	if (params->register_for_channel(name, SCS_U32_NIL, type, SCS_TELEMETRY_CHANNEL_FLAG_none, Telemetry::channel_update, context) != SCS_RESULT_ok) {
+	    string message = "[telemetry] : unable to register for scs_telemetry_t=" + string(name) + "' channel update.";
+	    this->log(message.c_str(), SCS_LOG_TYPE_error);
+	    return false;
+	}
+    return true;
+}
 
 Telemetry* telemetry = NULL;
 
