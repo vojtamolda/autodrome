@@ -1,6 +1,6 @@
 """Definition of Python counterparts to C data structures published by the ETS2/ATS game telemetry plugin"""
 
-import telemetry.scstypes as scstypes
+import common.scstypes as scstypes
 
 
 class Packet(scstypes.Structure):
