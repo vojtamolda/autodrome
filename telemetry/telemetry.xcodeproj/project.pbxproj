@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		79EF42E51EBE91DB007D0ECB /* telemetry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 79EF42CC1EBE8F77007D0ECB /* telemetry.cpp */; };
 		79EF42EB1EBE9C13007D0ECB /* libtelemetry.so in CopyFiles */ = {isa = PBXBuildFile; fileRef = 79EF42E11EBE91D6007D0ECB /* libtelemetry.so */; };
+		79FA8E701ECA6C5400DA7A7E /* plugin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 79FA8E6F1ECA6C5400DA7A7E /* plugin.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,6 +29,7 @@
 		79EF42CC1EBE8F77007D0ECB /* telemetry.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = telemetry.cpp; sourceTree = "<group>"; };
 		79EF42E11EBE91D6007D0ECB /* libtelemetry.so */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libtelemetry.so; sourceTree = BUILT_PRODUCTS_DIR; };
 		79EF42EC1EC16940007D0ECB /* telemetry.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = telemetry.hpp; sourceTree = "<group>"; };
+		79FA8E6F1ECA6C5400DA7A7E /* plugin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = plugin.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -50,6 +52,7 @@
 		79EF42CB1EBE8F69007D0ECB /* Source */ = {
 			isa = PBXGroup;
 			children = (
+				79FA8E6F1ECA6C5400DA7A7E /* plugin.cpp */,
 				79EF42EC1EC16940007D0ECB /* telemetry.hpp */,
 				79EF42CC1EBE8F77007D0ECB /* telemetry.cpp */,
 			);
@@ -113,6 +116,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				79FA8E701ECA6C5400DA7A7E /* plugin.cpp in Sources */,
 				79EF42E51EBE91DB007D0ECB /* telemetry.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
