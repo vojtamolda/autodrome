@@ -36,17 +36,40 @@ class TestTelemetry(unittest.TestCase):
         self.assertEqual(packet.simulation_time, 15)
         self.assertEqual(packet.paused_simulation_time, 16)
 
+    @unittest.skip("Game has to be started and shutdown manually")
     def test_telemetry(self):
-        # cp plugin/telemetry.so into $(HOME)/Library/Application Support/Steam/steamapps/common/American Truck Simulator/American Truck Simulator.app/Contents/MacOS/plugins/
-        # run  $(HOME)/Library/Application Support/Steam/steamapps/common/American Truck Simulator/American Truck Simulator.app/Contents/MacOS/amtrucks -nointro -force_mods -preview "loop_track"
-        # wait...
+        # copy libtelemetry.so into $(HOME)/Library/Application Support/Steam/steamapps/common/American Truck Simulator/American Truck Simulator.app/Contents/MacOS/plugins/
+        # start this test
+        # run $(HOME)/Library/Application Support/Steam/steamapps/common/American Truck Simulator/American Truck Simulator.app/Contents/MacOS/amtrucks
+        # get into a truck and drive for a momement
+        # exit the game
 
-        context = zmq.Context()
-        socket = context.socket(zmq.SUB)
+        event_socket = zmq.Context().socket(zmq.SUB)
+        event_socket.setsockopt(zmq.SUBSCRIBE, bytes())
+        event_socket.connect('ipc:///tmp/event.ipc')
+        telemetry_socket = zmq.Context().socket(zmq.SUB)
+        telemetry_socket.setsockopt(zmq.SUBSCRIBE, bytes())
+        telemetry_socket.connect('ipc:///tmp/telemetry.ipc')
 
+        config, start, telemetry, pause, shutdown = False, False, False, False, False
         while True:
-            socket.setsockopt(zmq.SUBSCRIBE, bytes())
-            socket.connect("tcp://127.0.0.1:5680")
-            message = socket.recv()
-            packet = Packet(message)
-            print(packet)
+            recieved_event = event_socket.recv()
+            if recieved_event == b'config':
+                config = True
+            if recieved_event == b'start':
+                start = True
+                for counter in range(100):
+                    message = telemetry_socket.recv()
+                    packet = Packet(message)
+                telemetry = True
+            if recieved_event == b'pause':
+                pause = True
+            if recieved_event == b'shutdown':
+                shutdown = True
+                break
+
+        self.assertTrue(config)
+        self.assertTrue(start)
+        self.assertTrue(telemetry)
+        self.assertTrue(pause)
+        self.assertTrue(shutdown)

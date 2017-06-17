@@ -3,14 +3,14 @@
 
 Telemetry::Telemetry(const scs_telemetry_init_params_v100_t *const params, const scs_u32_t version) :
     paused(true), game_log(params->common.log),
-    zmq_context(1), zmq_publisher(zmq_context, ZMQ_PUB),
+    zmq_context(1), zmq_event(zmq_context, ZMQ_PUB), zmq_telemetry(zmq_context, ZMQ_PUB),
     packet()
 {
     if (! this->check_version(params, version)) {
         throw exception();
     }
-    
-    this->register_event(params, SCS_TELEMETRY_EVENT_configuration, Telemetry::configuration_callback);
+
+    this->register_event(params, SCS_TELEMETRY_EVENT_configuration, Telemetry::config_callback);
     this->register_event(params, SCS_TELEMETRY_EVENT_started, Telemetry::start_callback);
     this->register_event(params, SCS_TELEMETRY_EVENT_frame_start, Telemetry::frame_start_callback);
     this->register_event(params, SCS_TELEMETRY_EVENT_frame_end, Telemetry::frame_end_callback);
@@ -28,18 +28,28 @@ Telemetry::Telemetry(const scs_telemetry_init_params_v100_t *const params, const
     // SCS_TELEMETRY_TRUCK_CHANNEL_rblinker
     // SCS_TELEMETRY_TRUCK_CHANNEL_navigation_speed_limit
 
-    this->zmq_publisher.bind("tcp://*:5680");
+    this->zmq_event.bind("ipc:///tmp/event.ipc");
+    this->zmq_telemetry.bind("ipc:///tmp/telemetry.ipc");
+
+    publish_t message("init");
+    this->zmq_event.send(message);
 }
 
-void Telemetry::configuration(const struct scs_telemetry_configuration_t *const configuration_info) {
-    // Working hard...
+void Telemetry::config(const struct scs_telemetry_configuration_t *const config_info) {
+    publish_t message("config");
+    this->zmq_event.send(message);
 }
 
 void Telemetry::start() {
     this->paused = false;
+
+    publish_t message("start");
+    this->zmq_event.send(message);
 }
 
 void Telemetry::frame_start(const struct scs_telemetry_frame_start_t *const frame_start_info) {
+    if (this->paused) return;
+
     this->packet.render_time = frame_start_info->render_time;
     this->packet.simulation_time = frame_start_info->simulation_time;
     this->packet.paused_simulation_time = frame_start_info->paused_simulation_time;
@@ -48,22 +58,25 @@ void Telemetry::frame_start(const struct scs_telemetry_frame_start_t *const fram
 void Telemetry::frame_end() {
     if (this->paused) return;
 
-    message_t message(&(this->packet), sizeof(this->packet));
-    this->zmq_publisher.send(message);
+    publish_t message(this->packet);
+    this->zmq_telemetry.send(message);
 }
 
 void Telemetry::pause() {
     this->paused = true;
+
+    publish_t message("pause");
+    this->zmq_event.send(message);
 }
 
 Telemetry::~Telemetry() {
-    this->game_log = NULL;
-    this->paused = true;
+    publish_t message("shutdown");
+    this->zmq_event.send(message);
 }
 
-SCSAPI_VOID Telemetry::configuration_callback(const scs_event_t event, const void *const event_info, const scs_context_t context) {
-    const struct scs_telemetry_configuration_t *const configuration_info = static_cast<const scs_telemetry_configuration_t*>(event_info);
-    static_cast<Telemetry*>(context)->configuration(configuration_info);
+SCSAPI_VOID Telemetry::config_callback(const scs_event_t event, const void *const event_info, const scs_context_t context) {
+    const struct scs_telemetry_configuration_t *const config_info = static_cast<const scs_telemetry_configuration_t*>(event_info);
+    static_cast<Telemetry*>(context)->config(config_info);
 }
 
 SCSAPI_VOID Telemetry::start_callback(const scs_event_t event, const void *const event_info, const scs_context_t context) {
@@ -83,7 +96,7 @@ SCSAPI_VOID Telemetry::pause_callback(const scs_event_t event, const void *const
     static_cast<Telemetry*>(context)->pause();
 }
 
-SCSAPI_VOID Telemetry::channel_update(const scs_string_t name, const scs_u32_t index, const scs_value_t *const value, const scs_context_t context) {
+SCSAPI_VOID Telemetry::channel_update(const scs_string_t channel, const scs_u32_t index, const scs_value_t *const value, const scs_context_t context) {
     switch (value->type) {
         case SCS_VALUE_TYPE_string: {
             scs_string_t *const storage = static_cast<scs_string_t *>(context);
@@ -143,14 +156,16 @@ SCSAPI_VOID Telemetry::channel_update(const scs_string_t name, const scs_u32_t i
     }
 }
 
-void Telemetry::log(const string& message, const scs_log_type_t type) {
+void Telemetry::log(const string& message, const scs_log_type_t type) const {
+    if (! this->game_log) return;
     this->game_log(type, message.c_str());
 }
 
-bool Telemetry::check_version(const scs_telemetry_init_params_v100_t *const params, const scs_u32_t version) {
+bool Telemetry::check_version(const scs_telemetry_init_params_v100_t *const params, const scs_u32_t version) const {
     if (version != SCS_TELEMETRY_VERSION_1_00) {
         return false;
     }
+
     if (string(SCS_GAME_ID_EUT2) == params->common.game_id) {
         const scs_u32_t MINIMAL_VERSION = SCS_TELEMETRY_EUT2_GAME_VERSION_1_00;
         if (params->common.game_version < MINIMAL_VERSION) {
@@ -163,6 +178,7 @@ bool Telemetry::check_version(const scs_telemetry_init_params_v100_t *const para
             return false;
         }
     }
+
     if (string(SCS_GAME_ID_ATS) == params->common.game_id) {
         const scs_u32_t MINIMAL_VERSION = SCS_TELEMETRY_ATS_GAME_VERSION_1_00;
         if (params->common.game_version < MINIMAL_VERSION) {
@@ -175,6 +191,7 @@ bool Telemetry::check_version(const scs_telemetry_init_params_v100_t *const para
             return false;
         }
     }
+
     return true;
 }
 
@@ -187,9 +204,9 @@ bool Telemetry::register_event(const scs_telemetry_init_params_v100_t *const par
     return true;
 }
 
-bool Telemetry::register_channel(const scs_telemetry_init_params_v100_t *const params, const scs_string_t name, const scs_value_type_t type, const scs_context_t context) {
-    if (params->register_for_channel(name, SCS_U32_NIL, type, SCS_TELEMETRY_CHANNEL_FLAG_none, Telemetry::channel_update, context) != SCS_RESULT_ok) {
-        string message = "[polygon] : unable to register for scs_telemetry_t=" + string(name) + "' channel update";
+bool Telemetry::register_channel(const scs_telemetry_init_params_v100_t *const params, const scs_string_t channel, const scs_value_type_t type, const scs_context_t context) {
+    if (params->register_for_channel(channel, SCS_U32_NIL, type, SCS_TELEMETRY_CHANNEL_FLAG_none, Telemetry::channel_update, context) != SCS_RESULT_ok) {
+        string message = "[polygon] : unable to register for scs_telemetry_t=" + string(channel) + "' channel update";
         this->log(message, SCS_LOG_TYPE_error);
         return false;
     }

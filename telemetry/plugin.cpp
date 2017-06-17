@@ -1,7 +1,7 @@
 #include "telemetry.hpp"
 
 
-static const unique_ptr<Telemetry*> telemetry = NULL;
+static Telemetry* telemetry = NULL;
 
 SCSAPI_RESULT scs_telemetry_init(const scs_u32_t version, const scs_telemetry_init_params_t *const init_params) {
     try {
@@ -14,5 +14,6 @@ SCSAPI_RESULT scs_telemetry_init(const scs_u32_t version, const scs_telemetry_in
 }
 
 SCSAPI_VOID scs_telemetry_shutdown(void) {
+    delete telemetry;
     telemetry = NULL;
 }
