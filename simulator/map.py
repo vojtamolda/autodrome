@@ -73,7 +73,7 @@ class MapFile(dict):
         arrayStruct = Keyword('array_struct') + identifier + Suppress('[') + arrayStructItems + Suppress(']')
 
         header = Optional(Suppress('SCSAnnotatedFileV1'))
-        entry << Group(int ^ float ^ float4 ^ fixed2 ^ fixed3 ^ quaternion ^ token ^ struct ^ arrayFloat ^ arrayStruct)
+        entry << Group(int ^ float ^ fixed2 ^ fixed3 ^ float4 ^ quaternion ^ token ^ struct ^ arrayFloat ^ arrayStruct)
 
         file = header + ZeroOrMore(entry)
         file.ignore(pythonStyleComment)
