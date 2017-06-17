@@ -189,6 +189,103 @@ class DefinitionFile(dict):
             supercontainer[piece] = structuralize(iterator)
 
 
+class Definition(dict):
+    """ SCS definition data (*.sii) represented as a cross-referenced graph of dictionaries, lists and items """
+
+    def __init__(self, directory: Path, recursive=False):
+        """ Read a SCS definition files (*.sii) from a directory and merge them into a single in-memory graph """
+        super().__init__()
+        siiFiles = directory.glob('**/*.sii' if recursive is True else '*.sii')
+
+        for siiFile in siiFiles:
+            defs = DefinitionFile(siiFile)
+            self.merge(defs)
+        self.resolve()
+
+    def merge(self, another: DefinitionFile):
+        """ Recursively merge with another definition file and check for duplicate values """
+        recurse = []
+
+        def merge(this: dict, other: dict):
+            for identifier, value in other.items():
+                if identifier in this:
+                    if isinstance(value, dict) and not isinstance(value, scstypes.struct_t):
+                        recurse.append(identifier)
+                        merge(this[identifier], other[identifier])
+                        recurse.pop()
+                    elif isinstance(value, list) and not isinstance(value, scstypes.array_t):
+                        this[identifier].extend(other[identifier])
+                    else:
+                        message = ("Duplicate found during merging:\n"
+                                   "File \"{path}\"\n"
+                                   "Key \"{name}::{ident}\"")
+                        message = message.format(name=".".join(recurse), ident=identifier, path=another.path)
+                        warnings.warn(message, RuntimeWarning)
+                        this[identifier] = value
+                else:
+                    this[identifier] = value
+
+        merge(self, another)
+
+    def resolve(self):
+        """ Recursively walk the value tree, resolve references and effectively form a graph out of the tree """
+        recurse = []
+        iterators = {
+            dict: lambda dct: dct.items(),
+            list: lambda lst: enumerate(lst),
+            Definition: lambda dfn: dfn.items(),
+            scstypes.array_t: lambda arr: enumerate(arr),
+            scstypes.struct_t: lambda dct: dct.items()
+        }
+
+        def resolve(container: object):
+            for key, item in iterators[type(container)](container):
+                if isinstance(item, DefinitionFile.Reference):
+                    try:
+                        resolved = self
+                        for piece in item.split('.'):
+                            resolved = resolved[piece]
+                        container[key] = resolved
+                    except KeyError:
+                        message = ("Unresolved reference\n"
+                                   "Key \"{name}::{ident}\"\n"
+                                   "Reference \"{reference}\"")
+                        message = message.format(name=".".join(recurse), ident=key, reference=item)
+                        warnings.warn(message, RuntimeWarning)
+                elif type(item) in iterators:
+                    recurse.append(key)
+                    resolve(item)
+                    recurse.pop()
+
+        resolve(self)
+
+    def __sizeof__(self):
+        """ Recursively calculate size of the contained data """
+        from sys import getsizeof
+        from inspect import getmro
+        from itertools import chain
+
+        counted = set()
+        containers = {
+            list: lambda lst: lst,
+            tuple: lambda tpl: tpl,
+            dict: lambda dct: chain(dct.keys(), dct.values())
+        }
+
+        def sizeof(item: object) -> int:
+            if id(item) in counted:
+                return 0
+            counted.add(id(item))
+            size = getsizeof(item, getsizeof(1))
+            baseclass = getmro(type(item))[-2]
+            if baseclass in containers:
+                iterator = containers[baseclass]
+                size += sum(map(sizeof, iterator(item)))
+            return size
+
+        return sum(map(sizeof, containers[dict](self)))
+
+
 # region Unit Tests
 
 
@@ -266,6 +363,15 @@ class TestDefinitionFile(unittest.TestCase):
             }
         }
         self.assertDictEqual(tree, correctTree)
+
+
+class TestDefinition(unittest.TestCase):
+
+    @unittest.skip("Definitions (def.scs) file has to be extracted manually to this location")
+    def testLoad(self):
+        dir = Path('/Users/Vojta/Source/scs_extracted/def/world/')
+        defs = Definition(dir, recursive=True)
+        pass
 
 
 # endregion
