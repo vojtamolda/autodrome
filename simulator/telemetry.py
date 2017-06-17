@@ -1,4 +1,5 @@
 import zmq
+import enum
 import struct
 import unittest
 
@@ -15,6 +16,26 @@ class Packet(scstypes.struct_t):
                 ('simulation_time', scstypes.timestamp_t),
                 ('paused_simulation_time', scstypes.timestamp_t)]
     _type_ = "".join([field_type._type_ for (field_name, field_type) in _fields_])
+
+
+class Event(enum.Enum):
+    """ Counterpart of the event message sent by the ETS2/ATS telemetry plugin """
+    INIT = b'init'
+    CONFIG = b'config'
+    START = b'start'
+    PAUSE = b'pause'
+    SHUTDOWN = b'shutdown'
+
+    @classmethod
+    def unpack(cls, buffer: bytes) -> object:
+        """ Create a new instance by unpacking the provided `bytes` """
+        return cls(buffer)
+
+
+class Bind:
+    """ Counterpart of ZeroMQ bindings to hosts and ports """
+    packet = 'ipc:///tmp/telemetry.ipc'
+    event = 'ipc:///tmp/event.ipc'
 
 
 # region Unit Tests
@@ -51,7 +72,7 @@ class TestTelemetry(unittest.TestCase):
         self.assertEqual(packet.simulation_time, 15)
         self.assertEqual(packet.paused_simulation_time, 16)
 
-    @unittest.skip("Game has to be started and shutdown manually")
+    # @unittest.skip("Game has to be started and shutdown manually")
     def test_telemetry(self):
         # copy libtelemetry.so into $(HOME)/Library/Application Support/Steam/steamapps/common/American Truck Simulator/American Truck Simulator.app/Contents/MacOS/plugins/
         # start this test
@@ -66,28 +87,20 @@ class TestTelemetry(unittest.TestCase):
         telemetry_socket.setsockopt(zmq.SUBSCRIBE, bytes())
         telemetry_socket.connect('ipc:///tmp/telemetry.ipc')
 
-        config, start, telemetry, pause, shutdown = False, False, False, False, False
-        while True:
-            recieved_event = event_socket.recv()
-            if recieved_event == b'config':
-                config = True
-            if recieved_event == b'start':
-                start = True
-                for counter in range(100):
-                    message = telemetry_socket.recv()
-                    packet = Packet(message)
-                telemetry = True
-            if recieved_event == b'pause':
-                pause = True
-            if recieved_event == b'shutdown':
-                shutdown = True
-                break
+        events = []
+        counter = 100
+        for socket, message in poller.poll(timeout=10):
+            if socket == event_socket:
+                event = Event.unpack(message)
+                events.append(event)
+            if socket == telemetry_socket:
+                packet = Packet.unpack(message)
+                if counter == 0:
+                    break
+                counter -= 1
 
-        self.assertTrue(config)
-        self.assertTrue(start)
-        self.assertTrue(telemetry)
-        self.assertTrue(pause)
-        self.assertTrue(shutdown)
+        self.assertListEqual(events, Event)
+        self.assertEqual(counter, 0)
 
 
 # endregion

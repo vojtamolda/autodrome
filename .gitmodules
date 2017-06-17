@@ -1,4 +1,4 @@
 [submodule "cppzmq"]
-	path = telemetry/cppzmq
+	path = simulator/plugin/cppzmq
 	url = https://github.com/zeromq/cppzmq.git
 
