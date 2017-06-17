@@ -2,6 +2,7 @@ import struct
 import unittest
 import warnings
 from pathlib import Path
+from multiprocessing import Pool
 from pyparsing import Word, Group, Suppress, Combine, Optional, QuotedString, Keyword, ZeroOrMore, CharsNotIn, \
                       ParseException, alphanums, nums, hexnums, delimitedList, \
                       cStyleComment, dblSlashComment, pythonStyleComment
@@ -154,6 +155,14 @@ class DefinitionFile(dict):
         """ Provide nice interface to access the definition file entries via dot-notation """
         return self[item] if item in self else None
 
+    def __getstate__(self) -> dict:
+        """ Handle the object as a dictionary when pickling """
+        return self.__dict__
+
+    def __setstate__(self, dct: dict):
+        """ Handle the object as a dictionary when unpickling """
+        self.__dict__.update(dct)
+
     def parse(self, tokens: list):
         """ Parse a SCS map (.mbd) file into a hierarchical tree of values, lists & dictionaries """
 
@@ -196,10 +205,12 @@ class Definition(dict):
         """ Read a SCS definition files (*.sii) from a directory and merge them into a single in-memory graph """
         super().__init__()
         siiFiles = directory.glob('**/*.sii' if recursive is True else '*.sii')
+        siiFiles = sorted(siiFiles, key=lambda file: file.stat().st_size, reverse=True)
 
-        for siiFile in siiFiles:
-            defs = DefinitionFile(siiFile)
-            self.merge(defs)
+        with Pool() as pool:
+            subDefinitions = pool.map(DefinitionFile, siiFiles)
+        for subDefinition in subDefinitions:
+            self.merge(subDefinition)
         self.resolve()
 
     def merge(self, another: DefinitionFile):
@@ -363,6 +374,13 @@ class TestDefinitionFile(unittest.TestCase):
             }
         }
         self.assertDictEqual(tree, correctTree)
+
+    def testPickle(self):
+        import pickle
+        original = DefinitionFile()
+        original.parse(DefinitionFile.Grammar.tokenize(self.entries))
+        unpickled = pickle.loads(pickle.dumps(original))
+        self.assertDictEqual(original, unpickled)
 
 
 class TestDefinition(unittest.TestCase):

@@ -4,7 +4,7 @@ import struct
 class struct_t(dict):
     """ Structure that can unpack itself from byte arrays with fields accessible via dot.notation """
 
-    def __init__(self, values):
+    def __init__(self, values: object):
         """ Initialize fields from a dictionary or from a list of values """
         if isinstance(values, dict):
             fields = values
@@ -14,9 +14,17 @@ class struct_t(dict):
                 fields[field_name] = field_type(field_value)
         super().__init__(fields)
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: object) -> object:
         """ Interface to access the structure members via dot.notation """
         return self[item] if item in self else None
+
+    def __getstate__(self) -> dict:
+        """ Handle the object as a dictionary when pickling """
+        return self.__dict__
+
+    def __setstate__(self, dct: dict):
+        """ Handle the object as a dictionary when unpickling """
+        self.__dict__.update(dct)
 
     @classmethod
     def unpack(cls, buffer: bytes) -> object:
