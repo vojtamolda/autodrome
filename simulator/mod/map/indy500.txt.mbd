@@ -1,0 +1,15 @@
+SCSAnnotatedFileV1
+
+u32 core_map_version: 836
+token game_id: "euro2"
+u32 game_map_version: 2
+struct start_placement {
+    float4 position: &43c98000 &3c400000 &43924800 &4b000800 # x:403 y:0.0117188 z:292.563
+    quaternion rotation: &3f800000 &00000000 &00000000 &00000000 # w:1 x:0 y:0 z:0
+}
+u32 game_tag: 2998976734
+float time_compression_normal: &41a00000 # 20
+float time_compresion_city: &40400000 # 3
+u8 europe_map_ui_corrections: 0
+
+# EOF #
