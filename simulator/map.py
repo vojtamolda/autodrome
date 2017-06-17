@@ -1,5 +1,6 @@
 import struct
 import unittest
+import warnings
 from pathlib import Path
 from pyparsing import Word, Group, Suppress, Regex, Keyword, Forward, Optional, QuotedString, ZeroOrMore, \
                       ParseException, alphas, alphanums, hexnums, nums, pythonStyleComment
@@ -149,6 +150,58 @@ class MapFile(dict):
             return structure
 
         self.update(structuralize(tokens))
+
+
+class Map(dict):
+    """ SCS map data (*.mbd, *.aux, *.base, *.desc) represented as a cross-referenced dictionary of items and nodes
+
+    The SCS map files have to be exported from the ETS2/ATS editor using the `edit_save_text` console command.
+    The save button or `edit_save` command produce a binary map data that are not currently supported.
+    """
+
+    def __init__(self, directory: Path):
+        """ Read a map (.mbd) file and *.aux, *.base, *.desc map files from a directory into memory """
+        super().__init__()
+        self.directory = directory
+        self['nodes'] = {}
+        self['items'] = []
+        auxFiles = directory.glob('*.aux')
+        baseFiles = directory.glob('*.base')
+        descFiles = directory.glob('*.desc')
+        mbdFile = directory.parent / (directory.name + '.mbd')
+
+        auxs = map(MapFile, auxFiles)
+        bases = map(MapFile, baseFiles)
+        descs = map(MapFile, descFiles)
+        mbd = MapFile(mbdFile)
+
+        self.merge(mbd)
+        for aux, base, desc in zip(auxs, bases, descs):
+            self.merge(base)
+        pass
+
+    def __getattr__(self, item: object) -> object:
+        """ Provide nice interface to access the map file entries via dot-notation """
+        return self[item] if item in self else None
+
+    def merge(self, another: MapFile):
+        """ Merge with another map file and check for duplicate values """
+        for identifier, value in another.items():
+            if identifier == 'items':
+                self['items'].extend(value)
+                continue
+            if identifier == 'nodes':
+                nodes = {node.uid: node for node in value}
+                self['nodes'].update(nodes)
+                continue
+            if identifier in self:
+                if self[identifier] != another[identifier]:
+                    message = ("Duplicate found during merging:\n"
+                               "File \"{path}\"\n"
+                               "Identifier \"{ident}\"")
+                    message = message.format(ident=identifier, path=another.path)
+                    warnings.warn(message, RuntimeWarning)
+            self[identifier] = value
 
 
 # region Unit Tests
@@ -328,6 +381,14 @@ class TestMapFile(unittest.TestCase):
             ]
         }
         self.assertDictEqual(tree, correctTree)
+
+
+class TestMap(unittest.TestCase):
+
+    def testLoad(self):
+        dir = Path('simulator/mod/map/indy500.txt/')
+        map = Map(dir)
+        pass
 
 
 # endregion
