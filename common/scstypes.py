@@ -86,6 +86,11 @@ class double_t(float):
     _type_ = 'd'
 
 
+class string_t(str):
+    """ Counterpart of `scs_string_t` """
+    pass
+
+
 class timestamp_t(u64_t):
     """ Counterpart of `scs_timestamp_t` """
     pass
