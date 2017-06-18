@@ -1,7 +1,9 @@
 #include <string>
-#include <exception>
 
 #include <zmq.hpp>
+#include <capnp/message.h>
+#include <capnp/serialize.h>
+#include "common/telemetry.capnp.h"
 
 #include <scssdk_telemetry.h>
 #include <amtrucks/scssdk_ats.h>
@@ -32,34 +34,33 @@ public:
     static SCSAPI_VOID frame_end_callback(const scs_event_t event, const void *const event_info, const scs_context_t context);
     static SCSAPI_VOID pause_callback(const scs_event_t event, const void *const event_info, const scs_context_t context);
 
-    void log(const string& message, const scs_log_type_t type=SCS_LOG_TYPE_message) const;
-    bool check_version(const scs_telemetry_init_params_v100_t *const params, const scs_u32_t version) const;
-
 protected:
-    bool register_event(const scs_telemetry_init_params_v100_t *const params, const scs_event_t event, const scs_telemetry_event_callback_t callback);
-    bool register_channel(const scs_telemetry_init_params_v100_t *const params, const scs_string_t channel, const scs_value_type_t type, const scs_context_t context);
+    class Helper {
+    public:
+        static void set(DPlacement::Builder builder, const scs_value_t *const value);
+        static void set(FPlacement::Builder builder, const scs_value_t *const value);
+        static void set(Euler::Builder builder, const scs_value_t *const value);
+        static void set(DVector::Builder builder, const scs_value_t *const value);
+        static void set(FVector::Builder builder, const scs_value_t *const value);
+    };
+
+    class capnp_socket_t: public socket_t {
+    public:
+        capnp_socket_t(context_t& context, int type);
+        size_t send(capnp::MessageBuilder &message);
+    };
+
+    context_t zmq_context;
+    capnp_socket_t event_socket;
+    capnp::MallocMessageBuilder event_packet;
+    capnp_socket_t data_socket;
+    capnp::MallocMessageBuilder data_packet;
 
     bool paused;
     const scs_log_t game_log;
-    context_t zmq_context;
-    socket_t zmq_event;
-    socket_t zmq_telemetry;
 
-    typedef struct {
-        scs_value_dplacement_t placement;
-        scs_value_dvector_t linear_velocity;
-        scs_value_dvector_t angular_velocity;
-        scs_double_t speed;
-        scs_timestamp_t render_time;
-        scs_timestamp_t simulation_time;
-        scs_timestamp_t paused_simulation_time;
-    } packet_t;
-    packet_t packet;
-
-    class publish_t: public message_t {
-    public:
-        publish_t(const packet_t& packet) : message_t(&packet, sizeof(packet)) { }
-        publish_t(const string& message) : message_t(message.c_str(), message.length()) { }
-    };
-
+    void log(const string& message, const scs_log_type_t type=SCS_LOG_TYPE_message) const;
+    bool check_version(const scs_telemetry_init_params_v100_t *const params, const scs_u32_t version) const;
+    bool register_event(const scs_telemetry_init_params_v100_t *const params, const scs_event_t event, const scs_telemetry_event_callback_t callback);
+    bool register_channel(const scs_telemetry_init_params_v100_t *const params, const scs_string_t channel, const scs_value_type_t type, const scs_context_t context);
 };

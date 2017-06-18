@@ -11,7 +11,6 @@
 #   ATS_INSTALL_DIR   - Directory containing ATS installation if different from Steam default.
 #   ETS2_DEPLOY       - TFlag for deployment for ATS.
 #   ETS2_INSTALL_DIR  - Directory containing ATS installation if different from Steam default.
-#   ZMQ_INSTALL_DIR   - Location of the ZeroMQ library (usually auto-detected).
 #
 # How to build the project::
 #   <code>
@@ -24,25 +23,54 @@ cmake_minimum_required(VERSION 3.2)
 project(polygon-telemetry)
 
 set(CMAKE_CXX_STANDARD 11)
-# set(CMAKE_VERBOSE_MAKEFILE TRUE)
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/)
+set(CMAKE_CXX_FLAGS)
+set(CMAKE_MODULE_PATH
+        ${CMAKE_SOURCE_DIR}/cmake/)
+
+set(INCLUDE_DIRS)
+set(SOURCE_FILES)
+set(LINK_LIBRARIES)
+
+find_package(SCSSDK REQUIRED)
+set(INCLUDE_DIRS
+        ${INCLUDE_DIRS} ${SCSSDK_INCLUDE_DIRS})
 
 find_package(ZMQ REQUIRED)
-find_package(CPPZMQ REQUIRED)
-find_package(SCSSDK REQUIRED)
-
 set(INCLUDE_DIRS
-        ${ZMQ_INCLUDE_DIRS}
-        ${CPPZMQ_INCLUDE_DIRS}
-        ${SCSSDK_INCLUDE_DIRS})
+        ${INCLUDE_DIRS} ${ZMQ_INCLUDE_DIRS})
+set(LINK_LIBRARIES
+        ${LINK_LIBRARIES} ${ZMQ_LIBRARIES})
+
+find_package(CPPZMQ REQUIRED)
+set(INCLUDE_DIRS
+        ${INCLUDE_DIRS} ${CPPZMQ_INCLUDE_DIRS})
+
+find_package(CAPNP REQUIRED)
+file(INSTALL "../../common"
+        DESTINATION "${CMAKE_SOURCE_DIR}")
+set(CAPNPC_OUTPUT_DIR
+        "${CMAKE_SOURCE_DIR}")
+capnp_generate_cpp(CAPNP_SOURCES CAPNP_HEADERS
+        "common/telemetry.capnp"
+        "common/scs.capnp")
+add_definitions(${CAPNP_DEFINITIONS})
+set(INCLUDE_DIRS
+        ${INCLUDE_DIRS} ${CAPNP_INCLUDE_DIRS})
 set(SOURCE_FILES
+        ${SOURCE_FILES} ${CAPNP_SOURCES})
+set(LINK_LIBRARIES
+        ${LINK_LIBRARIES} ${CAPNP_LIBRARIES})
+
+set(SOURCE_FILES
+        ${SOURCE_FILES}
         plugin.cpp
         telemetry.cpp)
 add_library(telemetry
         MODULE ${SOURCE_FILES})
-target_link_libraries(telemetry ZMQ)
+target_link_libraries(telemetry ${LINK_LIBRARIES})
 target_include_directories(telemetry PUBLIC ${INCLUDE_DIRS})
 set_target_properties(telemetry PROPERTIES OUTPUT_NAME polygon)
+
 
 option(ATS_DEPLOY "Deploy the telemetry plugin into ATS installation" TRUE)
 if (ATS_DEPLOY)

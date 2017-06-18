@@ -3,8 +3,9 @@
 
 Telemetry::Telemetry(const scs_telemetry_init_params_v100_t *const params, const scs_u32_t version) :
     paused(true), game_log(params->common.log),
-    zmq_context(1), zmq_event(zmq_context, ZMQ_PUB), zmq_telemetry(zmq_context, ZMQ_PUB),
-    packet()
+    zmq_context(1),
+    event_socket(zmq_context, ZMQ_PUB), event_packet(),
+    data_socket(zmq_context, ZMQ_PUB), data_packet()
 {
     if (! this->check_version(params, version)) {
         throw exception();
@@ -16,10 +17,10 @@ Telemetry::Telemetry(const scs_telemetry_init_params_v100_t *const params, const
     this->register_event(params, SCS_TELEMETRY_EVENT_frame_end, Telemetry::frame_end_callback);
     this->register_event(params, SCS_TELEMETRY_EVENT_paused, Telemetry::pause_callback);
 
-    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_world_placement, SCS_VALUE_TYPE_dplacement, &(this->packet.placement));
-    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_local_linear_velocity, SCS_VALUE_TYPE_dvector, &(this->packet.linear_velocity));
-    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_local_angular_velocity, SCS_VALUE_TYPE_dvector, &(this->packet.angular_velocity));
-    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_speed, SCS_VALUE_TYPE_double, &(this->packet.speed));
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_world_placement, SCS_VALUE_TYPE_dplacement, this);
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_local_linear_velocity, SCS_VALUE_TYPE_dvector, this);
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_local_angular_velocity, SCS_VALUE_TYPE_dvector, this);
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_speed, SCS_VALUE_TYPE_double, this);
     // SCS_TELEMETRY_TRUCK_CHANNEL_effective_steering
     // SCS_TELEMETRY_TRUCK_CHANNEL_effective_throttle
     // SCS_TELEMETRY_TRUCK_CHANNEL_effective_brake
@@ -27,52 +28,56 @@ Telemetry::Telemetry(const scs_telemetry_init_params_v100_t *const params, const
     // SCS_TELEMETRY_TRUCK_CHANNEL_lblinker
     // SCS_TELEMETRY_TRUCK_CHANNEL_rblinker
     // SCS_TELEMETRY_TRUCK_CHANNEL_navigation_speed_limit
+    // ...
 
-    this->zmq_event.bind("ipc:///tmp/event.ipc");
-    this->zmq_telemetry.bind("ipc:///tmp/telemetry.ipc");
+    this->data_packet.initRoot<Data>();
+    this->data_socket.bind(Bind::DATA.toString());
 
-    publish_t message("init");
-    this->zmq_event.send(message);
+    this->event_packet.initRoot<Event>();
+    this->event_socket.bind(Bind::EVENT.toString());
+    this->event_packet.getRoot<Event>().setType(Event::Type::INIT);
+    this->event_socket.send(this->event_packet);
 }
 
 void Telemetry::config(const struct scs_telemetry_configuration_t *const config_info) {
-    publish_t message("config");
-    this->zmq_event.send(message);
+    this->event_packet.getRoot<Event>().setType(Event::Type::CONFIG);
+    this->event_socket.send(this->event_packet);
 }
 
 void Telemetry::start() {
     this->paused = false;
 
-    publish_t message("start");
-    this->zmq_event.send(message);
+    this->event_packet.getRoot<Event>().setType(Event::Type::START);
+    this->event_socket.send(this->event_packet);
 }
 
 void Telemetry::frame_start(const struct scs_telemetry_frame_start_t *const frame_start_info) {
     if (this->paused) return;
 
-    this->packet.render_time = frame_start_info->render_time;
-    this->packet.simulation_time = frame_start_info->simulation_time;
-    this->packet.paused_simulation_time = frame_start_info->paused_simulation_time;
+    Data::Builder data = this->data_packet.getRoot<Data>();
+    data.setPausedSimulationTime(frame_start_info->paused_simulation_time);
+    data.setSimulationTime(frame_start_info->simulation_time);
+    data.setRenderTime(frame_start_info->render_time);
 }
 
 void Telemetry::frame_end() {
     if (this->paused) return;
 
-    publish_t message(this->packet);
-    this->zmq_telemetry.send(message);
+    this->data_socket.send(this->data_packet);
 }
 
 void Telemetry::pause() {
     this->paused = true;
 
-    publish_t message("pause");
-    this->zmq_event.send(message);
+    this->event_packet.getRoot<Event>().setType(Event::Type::PAUSE);
+    this->event_socket.send(this->event_packet);
 }
 
 Telemetry::~Telemetry() {
-    publish_t message("shutdown");
-    this->zmq_event.send(message);
+    this->event_packet.getRoot<Event>().setType(Event::Type::SHUTDOWN);
+    this->event_socket.send(this->event_packet);
 }
+
 
 SCSAPI_VOID Telemetry::config_callback(const scs_event_t event, const void *const event_info, const scs_context_t context) {
     const struct scs_telemetry_configuration_t *const config_info = static_cast<const scs_telemetry_configuration_t*>(event_info);
@@ -97,67 +102,80 @@ SCSAPI_VOID Telemetry::pause_callback(const scs_event_t event, const void *const
 }
 
 SCSAPI_VOID Telemetry::channel_update(const scs_string_t channel, const scs_u32_t index, const scs_value_t *const value, const scs_context_t context) {
-    switch (value->type) {
-        case SCS_VALUE_TYPE_string: {
-            scs_string_t *const storage = static_cast<scs_string_t *>(context);
-            *storage = value->value_string.value;
-            break;
-        }
-        case SCS_VALUE_TYPE_dplacement: {
-            scs_value_dplacement_t *const storage = static_cast<scs_value_dplacement_t *>(context);
-            *storage = value->value_dplacement;
-            break;
-        }
-        case SCS_VALUE_TYPE_fplacement: {
-            scs_value_fplacement_t *const storage = static_cast<scs_value_fplacement_t *>(context);
-            *storage = value->value_fplacement;
-            break;
-        }
-        case SCS_VALUE_TYPE_euler: {
-            scs_value_euler_t *const storage = static_cast<scs_value_euler_t *>(context);
-            *storage = value->value_euler;
-            break;
-        }
-        case SCS_VALUE_TYPE_dvector: {
-            scs_value_dvector_t *const storage = static_cast<scs_value_dvector_t *>(context);
-            *storage = value->value_dvector;
-            break;
-        }
-        case SCS_VALUE_TYPE_fvector: {
-            scs_value_fvector_t *const storage = static_cast<scs_value_fvector_t *>(context);
-            *storage = value->value_fvector;
-            break;
-        }
-        case SCS_VALUE_TYPE_double: {
-            scs_double_t *const storage = static_cast<scs_double_t *>(context);
-            *storage = value->value_double.value;
-            break;
-        }
-        case SCS_VALUE_TYPE_u64: {
-            scs_u64_t *const storage = static_cast<scs_u64_t *>(context);
-            *storage = value->value_u64.value;
-            break;
-        }
-        case SCS_VALUE_TYPE_u32: {
-            scs_u32_t *const storage = static_cast<scs_u32_t *>(context);
-            *storage = value->value_u32.value;
-            break;
-        }
-        case SCS_VALUE_TYPE_s32: {
-            scs_s32_t *const storage = static_cast<scs_s32_t *>(context);
-            *storage = value->value_s32.value;
-            break;
-        }
-        case SCS_VALUE_TYPE_bool: {
-            scs_u8_t *const storage = static_cast<scs_u8_t *>(context);
-            *storage = value->value_bool.value;
-            break;
-        }
+    Data::Builder data = static_cast<Telemetry *>(context)->data_packet.getRoot<Data>();
+
+    if (string(SCS_TELEMETRY_TRUCK_CHANNEL_world_placement) == channel) {
+        Helper::set(data.getWorldPlacement(), value);
+    } else if (string(SCS_TELEMETRY_TRUCK_CHANNEL_local_linear_velocity) == channel) {
+        Helper::set(data.getLocalLinearVelocity(), value);
+    } else if (string(SCS_TELEMETRY_TRUCK_CHANNEL_local_angular_velocity) == channel) {
+        Helper::set(data.getLocalAngularVelocity(), value);
+    } else if (string(SCS_TELEMETRY_TRUCK_CHANNEL_speed) == channel) {
+        data.setSpeed(value->value_double.value);
     }
 }
 
+
+void Telemetry::Helper::set(DPlacement::Builder builder, const scs_value_t *const value) {
+    assert(SCS_VALUE_TYPE_dplacement == value->type);
+    scs_value_dplacement_t dplacement = value->value_dplacement;
+
+    scs_value_t position_value = {.type = SCS_VALUE_TYPE_dvector, .value_dvector = dplacement.position};
+    Helper::set(builder.getPosition(), &position_value);
+
+    scs_value_t orientation_value = {.type = SCS_VALUE_TYPE_euler, .value_euler = dplacement.orientation};
+    Helper::set(builder.getOrientation(), &orientation_value);
+}
+
+void Telemetry::Helper::set(FPlacement::Builder builder, const scs_value_t *const value) {
+    assert(SCS_VALUE_TYPE_fplacement == value->type);
+    scs_value_fplacement_t fplacement = value->value_fplacement;
+
+    scs_value_t position_value = {.type = SCS_VALUE_TYPE_fvector, .value_fvector = fplacement.position};
+    Helper::set(builder.getPosition(), &position_value);
+
+    scs_value_t orientation_value = {.type = SCS_VALUE_TYPE_euler, .value_euler = fplacement.orientation};
+    Helper::set(builder.getOrientation(), &orientation_value);
+}
+
+void Telemetry::Helper::set(Euler::Builder builder, const scs_value_t *const value) {
+    assert(SCS_VALUE_TYPE_euler == value->type);
+    scs_value_euler_t euler = value->value_euler;
+    builder.setHeading(euler.heading);
+    builder.setPitch(euler.pitch);
+    builder.setRoll(euler.roll);
+}
+
+void Telemetry::Helper::set(DVector::Builder builder, const scs_value_t *const value) {
+    assert(SCS_VALUE_TYPE_dvector == value->type);
+    scs_value_dvector_t dvector = value->value_dvector;
+    builder.setX(dvector.x);
+    builder.setY(dvector.y);
+    builder.setZ(dvector.z);
+}
+
+void Telemetry::Helper::set(FVector::Builder builder, const scs_value_t *const value) {
+    assert(SCS_VALUE_TYPE_fvector == value->type);
+    scs_value_fvector_t fvector = value->value_fvector;
+    builder.setX(fvector.x);
+    builder.setY(fvector.y);
+    builder.setZ(fvector.z);
+}
+
+
+Telemetry::capnp_socket_t::capnp_socket_t(context_t& context, int type) :
+        socket_t(context, type)
+{/*   ¯\(°_o)/¯   */}
+
+size_t Telemetry::capnp_socket_t::send(capnp::MessageBuilder &message) {
+    auto words = capnp::messageToFlatArray(message);
+    auto bytes = words.asBytes();
+    return socket_t::send(bytes.begin(), bytes.size(), 0);
+}
+
+
 void Telemetry::log(const string& message, const scs_log_type_t type) const {
-    if (! this->game_log) return;
+    if (!this->game_log) return;
     this->game_log(type, message.c_str());
 }
 

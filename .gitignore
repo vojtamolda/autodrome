@@ -1,15 +1,9 @@
-# C binary objects
-*.o
-
 # Python byte-code and cache
 __pycache__/
 *.py[cod]
 
-
-# PyCharm projects
+# PyCharm & CLion projects
 .idea/
 
-# XCode projects
-*.pbxuser
-!default.pbxuser
-xcuserdata/
+# Copy of common/ for CMake build of telemetry plugin
+simulator/plugin/common/*
