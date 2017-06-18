@@ -26,11 +26,6 @@ class Event(enum.Enum):
     PAUSE = b'pause'
     SHUTDOWN = b'shutdown'
 
-    @classmethod
-    def unpack(cls, buffer: bytes) -> object:
-        """ Create a new instance by unpacking the provided `bytes` """
-        return cls(buffer)
-
 
 class Bind:
     """ Counterpart of ZeroMQ bindings to hosts and ports """
@@ -80,26 +75,51 @@ class TestTelemetry(unittest.TestCase):
         # get into a truck and drive for a moment
         # exit the game
 
+        context = zmq.Context()
+        event_socket = context.socket(zmq.SUB)
+        event_socket.setsockopt(zmq.SUBSCRIBE, bytes())
+        event_socket.connect(Bind.event)
+        telemetry_socket = context.socket(zmq.SUB)
+        telemetry_socket.setsockopt(zmq.SUBSCRIBE, bytes())
+        telemetry_socket.connect(Bind.telemetry)
+
+        poller = zmq.Poller()
+        poller.register(event_socket, flags=zmq.POLLIN)
+        poller.register(telemetry_socket, flags=zmq.POLLIN)
+
         event_socket = zmq.Context().socket(zmq.SUB)
         event_socket.setsockopt(zmq.SUBSCRIBE, bytes())
-        event_socket.connect('ipc:///tmp/event.ipc')
+        event_socket.connect(Bind.event)
         telemetry_socket = zmq.Context().socket(zmq.SUB)
         telemetry_socket.setsockopt(zmq.SUBSCRIBE, bytes())
-        telemetry_socket.connect('ipc:///tmp/telemetry.ipc')
+        telemetry_socket.connect(Bind.telemetry)
 
-        events = []
         counter = 100
+        init, config, start, pause, shutdown = False, False, False, False, False
         for socket, message in poller.poll(timeout=10):
             if socket == event_socket:
-                event = Event.unpack(message)
-                events.append(event)
+                event = Event(message)
+                if event == Event.INIT:
+                    init = True
+                if event == Event.CONFIG:
+                    config = True
+                if event == Event.START:
+                    start = True
+                if event == Event.PAUSE:
+                    pause = True
+                if event == Event.SHUTDOWN:
+                    shutdown = True
             if socket == telemetry_socket:
                 packet = Packet.unpack(message)
                 if counter == 0:
                     break
                 counter -= 1
 
-        self.assertListEqual(events, Event)
+        self.assertTrue(init)
+        self.assertTrue(config)
+        self.assertTrue(start)
+        self.assertTrue(pause)
+        self.assertTrue(shutdown)
         self.assertEqual(counter, 0)
 
 

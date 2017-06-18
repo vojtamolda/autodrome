@@ -1,2 +1,4 @@
+numpy>=1.11.3
 pyzmq>=16.0.1
 pyparsing>=2.1.4
+matplotlib>=2.0.0
