@@ -1,0 +1,79 @@
+# Distributed under the MIT license.
+
+#.rst:
+# ETS2/ATS Game Telemetry Plugin for Polygon
+# ------------------------------------------
+#
+# CMake receipt for building and installing the telemetry plugin for ETS2 and ATS games.
+#
+# Following variables can be used to configure the build::
+#   ATS_DEPLOY        - Flag for deployment for ATS.
+#   ATS_INSTALL_DIR   - Directory containing ATS installation if different from Steam default.
+#   ETS2_DEPLOY       - TFlag for deployment for ATS.
+#   ETS2_INSTALL_DIR  - Directory containing ATS installation if different from Steam default.
+#   ZMQ_INSTALL_DIR   - Location of the ZeroMQ library (usually auto-detected).
+#
+# How to build the project::
+#   <code>
+#     cmake
+#     make [ats_deploy|ats_launch|ets2_deploy|ets2_launch]
+#   </code>
+#
+
+cmake_minimum_required(VERSION 3.2)
+project(polygon-telemetry)
+
+set(CMAKE_CXX_STANDARD 11)
+# set(CMAKE_VERBOSE_MAKEFILE TRUE)
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/)
+
+find_package(ZMQ REQUIRED)
+find_package(CPPZMQ REQUIRED)
+find_package(SCSSDK REQUIRED)
+
+set(INCLUDE_DIRS
+        ${ZMQ_INCLUDE_DIRS}
+        ${CPPZMQ_INCLUDE_DIRS}
+        ${SCSSDK_INCLUDE_DIRS})
+set(SOURCE_FILES
+        plugin.cpp
+        telemetry.cpp)
+add_library(telemetry
+        MODULE ${SOURCE_FILES})
+target_link_libraries(telemetry ZMQ)
+target_include_directories(telemetry PUBLIC ${INCLUDE_DIRS})
+set_target_properties(telemetry PROPERTIES OUTPUT_NAME polygon)
+
+option(ATS_DEPLOY "Deploy the telemetry plugin into ATS installation" TRUE)
+if (ATS_DEPLOY)
+    find_package(ATS)
+    if (ATS_FOUND)
+        install(TARGETS telemetry
+                DESTINATION "${ATS_PLUGIN_DIR}")
+        add_custom_target(ats_deploy
+                COMMAND make install
+                DEPENDS telemetry
+                COMMENT "Install plugin for ATS")
+        add_custom_target(ats_launch
+                COMMAND ${ATS_EXECUTABLE}
+                DEPENDS ats_deploy
+                COMMENT "Launch ATS")
+    endif ()
+endif ()
+
+option(ETS2_DEPLOY "Deploy the telemetry plugin into ETS2 installation" TRUE)
+if (ETS2_DEPLOY)
+    find_package(ETS2)
+    if (ETS2_FOUND)
+        install(TARGETS telemetry
+                DESTINATION "${ETS2_PLUGIN_DIR}")
+        add_custom_target(ets2_deploy
+                COMMAND make install
+                DEPENDS telemetry
+                COMMENT "Install plugin for ETS2")
+        add_custom_target(ets2_launch
+                COMMAND ${ETS2_EXECUTABLE}
+                DEPENDS ets2_deploy
+                COMMENT "Launch ETS2")
+    endif ()
+endif ()
