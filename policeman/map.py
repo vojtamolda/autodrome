@@ -5,8 +5,6 @@ from pathlib import Path
 from pyparsing import Word, Group, Suppress, Regex, Keyword, Forward, Optional, QuotedString, ZeroOrMore, \
                       ParseException, alphas, alphanums, hexnums, nums, pythonStyleComment
 
-import common.scstypes as scstypes
-
 
 class MapFile(dict):
     """ SCS annotated file (.mbd, .base, .aux, .desc) parsed as a hierarchical tree of values, lists & dictionaries """
@@ -89,22 +87,22 @@ class MapFile(dict):
         pass
 
     Constructors = {
-        'u8': scstypes.u8_t,
-        'u16': scstypes.u16_t,
-        's16': scstypes.s16_t,
-        'u32': scstypes.u32_t,
-        's32': scstypes.s32_t,
-        'u64': scstypes.u64_t,
-        's64': scstypes.s64_t,
+        'u8': int,
+        'u16': int,
+        's16': int,
+        'u32': int,
+        's32': int,
+        'u64': int,
+        's64': int,
         'token': Reference,
-        'float': scstypes.float_t,
-        'fixed2': scstypes.float2_t,
-        'fixed3': scstypes.float3_t,
-        'float4': scstypes.float4_t,
-        'quaternion': scstypes.quaternion_t,
-        'struct': scstypes.struct_t,
-        'array_struct': scstypes.array_t,
-        'array_float': scstypes.array_t
+        'float': float,
+        'fixed2': lambda vals: {'x': vals[0], 'y': vals[1]},
+        'fixed3': lambda vals: {'x': vals[0], 'y': vals[1], 'z': vals[2]},
+        'float4': tuple,
+        'quaternion': lambda vals: {'w': vals[0], 'x': vals[1], 'y': vals[2], 'z': vals[3]},
+        'array_struct': list,
+        'array_float': list,
+        'struct': dict
     }
     # endregion
 
@@ -139,7 +137,7 @@ class MapFile(dict):
                 type, identifier, value = entry
                 constructor = self.Constructors[type]
                 if type == 'array_struct':
-                    members = [scstypes.struct_t(structuralize(val)) for val in value]
+                    members = [dict(structuralize(val)) for val in value]
                     value = constructor(members)
                 elif type == 'struct':
                     members = structuralize(value)
@@ -191,7 +189,7 @@ class Map(dict):
                 self['items'].extend(value)
                 continue
             if identifier == 'nodes':
-                nodes = {node.uid: node for node in value}
+                nodes = {node['uid']: node for node in value}
                 self['nodes'].update(nodes)
                 continue
             if identifier in self:
@@ -238,15 +236,15 @@ class TestMapFile(unittest.TestCase):
         tree = MapFile()
         tree.parse(tokens)
         correctTree = {
-            'type_info': scstypes.u8_t(17),
-            'right_terrain_size': scstypes.u16_t(500),
-            'right_road_height': scstypes.s32_t(-33),
-            'node0_uid': scstypes.u64_t(526114473086),
+            'type_info': 17,
+            'right_terrain_size': 500,
+            'right_road_height': -33,
+            'node0_uid': 526114473086,
             'road_look': MapFile.Reference('look24'),
-            'right_profile_coef': scstypes.float_t(1.0),
-            'position': scstypes.float3_t([387.0625, -0.0078125,  364.57421875]),
-            'rotation': scstypes.quaternion_t([-0.9726144671440125, -0.00010302798909833655,
-                                               0.23242449760437012, -2.462043812556658e-05])
+            'right_profile_coef': 1.0,
+            'position': {'x': 387.0625, 'y': -0.0078125, 'z': 364.57421875},
+            'rotation': {'w': -0.9726144671440125, 'x': -0.00010302798909833655,
+                         'y': 0.23242449760437012, 'z': -2.462043812556658e-05}
         }
         self.assertDictEqual(tree, correctTree)
 
@@ -279,15 +277,15 @@ class TestMapFile(unittest.TestCase):
         tree = MapFile()
         tree.parse(tokens)
         correctTree = {
-            'node_item': scstypes.struct_t({
-                'uid': scstypes.u64_t(211625559166),
-                'position': scstypes.float3_t([387.0625, -0.0078125, 364.57421875]),
-                'rotation': scstypes.quaternion_t([-0.9726144671440125, -0.00010302798909833655,
-                                                   0.23242449760437012, -2.462043812556658e-05]),
-                'forward_item_uid': scstypes.u64_t(1152922047666308222),
-                'backward_item_uid': scstypes.u64_t(1152922008223073406),
-                'flags': scstypes.u32_t(1)
-            })
+            'node_item': {
+                'uid': 211625559166,
+                'position': {'x': 387.0625, 'y': -0.0078125, 'z': 364.57421875},
+                'rotation': {'w': -0.9726144671440125, 'x': -0.00010302798909833655,
+                             'y': 0.23242449760437012, 'z': -2.462043812556658e-05},
+                'forward_item_uid': 1152922047666308222,
+                'backward_item_uid': 1152922008223073406,
+                'flags': 1
+            }
         }
         self.assertDictEqual(tree, correctTree)
 
@@ -310,7 +308,7 @@ class TestMapFile(unittest.TestCase):
         tree = MapFile()
         tree.parse(tokens)
         correctTree = {
-            'minimums': scstypes.array_t([338.68359375, -15.5, 200.6796875, 296.1484375, 28.05859375])
+            'minimums': [338.68359375, -15.5, 200.6796875, 296.1484375, 28.05859375]
         }
         self.assertDictEqual(tree, correctTree)
 
@@ -362,22 +360,22 @@ class TestMapFile(unittest.TestCase):
         tree.parse(tokens)
         correctTree = {
             'right_vegetation': [
-                scstypes.struct_t({
-                    'vegetation': scstypes.string_t('grass'),
-                    'density': scstypes.u16_t(4000),
-                    'hi_poly_distance': scstypes.u64_t(50),
-                    'scale_type': scstypes.u8_t(0),
-                    'start': scstypes.u16_t(0),
-                    'end': scstypes.u16_t(0)
-                }),
-                scstypes.struct_t({
-                    'vegetation': scstypes.string_t('corn'),
-                    'density': scstypes.u16_t(8000),
-                    'hi_poly_distance': scstypes.u64_t(500),
-                    'scale_type': scstypes.u8_t(0),
-                    'start': scstypes.u16_t(1),
-                    'end': scstypes.u16_t(1)
-                })
+                {
+                    'vegetation': 'grass',
+                    'density': 4000,
+                    'hi_poly_distance': 50,
+                    'scale_type': 0,
+                    'start': 0,
+                    'end': 0
+                },
+                {
+                    'vegetation': 'corn',
+                    'density': 8000,
+                    'hi_poly_distance': 500,
+                    'scale_type': 0,
+                    'start': 1,
+                    'end': 1
+                }
             ]
         }
         self.assertDictEqual(tree, correctTree)

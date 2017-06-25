@@ -7,8 +7,6 @@ from pyparsing import Word, Group, Suppress, Combine, Optional, QuotedString, Ke
                       ParseException, alphanums, nums, hexnums, delimitedList, \
                       cStyleComment, dblSlashComment, pythonStyleComment
 
-import common.scstypes as scstypes
-
 
 class DefinitionFile(dict):
     """ SCS definition (.sii) file parsed as a hierarchical tree of values, lists & dictionaries """
@@ -49,15 +47,8 @@ class DefinitionFile(dict):
 
             @staticmethod
             def tuple(toks):
-                """ Parse a tuple into the corresponding floatN_t"""
-                if len(toks[0]) == 2:
-                    toks[0] = scstypes.float2_t(toks[0])
-                elif len(toks[0]) == 3:
-                    toks[0] = scstypes.float3_t(toks[0])
-                elif len(toks[0]) == 4:
-                    toks[0] = scstypes.float4_t(toks[0])
-                else:
-                    toks[0] = tuple(toks[0])
+                """ Parse a tuple"""
+                toks[0] = tuple(toks[0])
                 return toks
 
             @staticmethod
@@ -123,13 +114,13 @@ class DefinitionFile(dict):
         pass
 
     Constructors = {
-        'int': scstypes.s64_t,
+        'int': int,
         'bool': lambda bln: bln,
-        'float': scstypes.float_t,
-        'text': scstypes.string_t,
+        'float': float,
+        'text': str,
         'tuple': lambda tpl: tpl,
         'reference': Reference,
-        'array': scstypes.array_t,
+        'array': list,
     }
     # endregion
 
@@ -176,7 +167,7 @@ class DefinitionFile(dict):
                     structure[identifier].append(value)
                 else:
                     if identifier in structure:
-                        message = ("Duplicate value found parsing:\n"
+                        message = ("Duplicate value found during parsing:\n"
                                    "File \"{path}\"\n"
                                    "Value \"{group}:{name}::{ident}\"")
                         message = message.format(group=group, name=name, ident=identifier, path=self.path)
@@ -220,11 +211,11 @@ class Definition(dict):
         def merge(this: dict, other: dict):
             for identifier, value in other.items():
                 if identifier in this:
-                    if isinstance(value, dict) and not isinstance(value, scstypes.struct_t):
+                    if isinstance(value, dict): # and not isinstance(value, scstypes.Struct):
                         recurse.append(identifier)
                         merge(this[identifier], other[identifier])
                         recurse.pop()
-                    elif isinstance(value, list) and not isinstance(value, scstypes.array_t):
+                    elif isinstance(value, list): #  and not isinstance(value, scstypes.Array):
                         this[identifier].extend(other[identifier])
                     else:
                         message = ("Duplicate found during merging:\n"
@@ -245,8 +236,6 @@ class Definition(dict):
             dict: lambda dct: dct.items(),
             list: lambda lst: enumerate(lst),
             Definition: lambda dfn: dfn.items(),
-            scstypes.array_t: lambda arr: enumerate(arr),
-            scstypes.struct_t: lambda dct: dct.items()
         }
 
         def resolve(container: object):
@@ -333,10 +322,10 @@ class TestDefinitionFile(unittest.TestCase):
                 ['text', 'name', 'Road 3'],
                 ['float', 'road_size', 0.35],
                 ['float', 'target_white', 0.5],
-                ['tuple', 'bloom_minimal_color', scstypes.float3_t((1.0, 1.0, 1.0))],
+                ['tuple', 'bloom_minimal_color', (1.0, 1.0, 1.0)],
                 ['bool', 'slow_time', True],
-                ['array', 'lane_offsets_right', scstypes.float2_t((1.25, 0))],
-                ['array', 'lane_offsets_right', scstypes.float2_t((1.25, 3.75))]
+                ['array', 'lane_offsets_right', (1.25, 0)],
+                ['array', 'lane_offsets_right', (1.25, 3.75)]
             ], [
                 ['road_look', 'road.look5'],
                 ['text', 'name', 'Road 5'],
@@ -354,22 +343,21 @@ class TestDefinitionFile(unittest.TestCase):
         correctTree = {
             'road': {
                 'look3': {
-                    'name': scstypes.string_t('Road 3'),
-                    'road_size': scstypes.float_t(0.35),
-                    'target_white': scstypes.float_t(0.5),
-                    'bloom_minimal_color': scstypes.float3_t((1.0, 1.0, 1.0)),
+                    'name': 'Road 3',
+                    'road_size': 0.35,
+                    'target_white': 0.5,
+                    'bloom_minimal_color': (1.0, 1.0, 1.0),
                     'slow_time': True,
-                    'lane_offsets_right': scstypes.array_t([scstypes.float2_t((1.25, 0)),
-                                                            scstypes.float2_t((1.25, 3.75))])
+                    'lane_offsets_right': [(1.25, 0), (1.25, 3.75)]
                 },
                 'look5': {
-                    'name': scstypes.string_t('Road 5'),
+                    'name': 'Road 5',
                     'reference': DefinitionFile.Reference('traffic_lane.road.divided'),
-                    'road_size': scstypes.float_t(5.5),
+                    'road_size': 5.5,
                     'slow_time': False,
-                    'center_line_style': scstypes.s64_t(2),
-                    'lanes': scstypes.array_t([DefinitionFile.Reference('traffic_lane.road.local'),
-                                               DefinitionFile.Reference('traffic_lane.road.highway')])
+                    'center_line_style': 2,
+                    'lanes': list([DefinitionFile.Reference('traffic_lane.road.local'),
+                                   DefinitionFile.Reference('traffic_lane.road.highway')])
                 }
             }
         }

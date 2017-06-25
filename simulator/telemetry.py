@@ -1,36 +1,8 @@
 import zmq
-import enum
-import struct
+import capnp
 import unittest
 
-import common.scstypes as scstypes
-
-
-class Packet(scstypes.struct_t):
-    """ Counterpart of the data structure sent by the ETS2/ATS telemetry plugin """
-    _fields_ = [('placement', scstypes.dplacement_t),
-                ('linear_velocity', scstypes.dvector_t),
-                ('angular_velocity', scstypes.dvector_t),
-                ('speed', scstypes.double_t),
-                ('render_time', scstypes.timestamp_t),
-                ('simulation_time', scstypes.timestamp_t),
-                ('paused_simulation_time', scstypes.timestamp_t)]
-    _type_ = "".join([field_type._type_ for (field_name, field_type) in _fields_])
-
-
-class Event(enum.Enum):
-    """ Counterpart of the event message sent by the ETS2/ATS telemetry plugin """
-    INIT = b'init'
-    CONFIG = b'config'
-    START = b'start'
-    PAUSE = b'pause'
-    SHUTDOWN = b'shutdown'
-
-
-class Bind:
-    """ Counterpart of ZeroMQ bindings to hosts and ports """
-    packet = 'ipc:///tmp/telemetry.ipc'
-    event = 'ipc:///tmp/event.ipc'
+import common.telemetry_capnp as telemetry
 
 
 # region Unit Tests
@@ -38,89 +10,40 @@ class Bind:
 
 class TestTelemetry(unittest.TestCase):
 
-    def test_unpack(self):
-        struct_format = 'ddd fff I ddd ddd d QQQ'.replace(' ', '')
-        self.assertEqual(Packet._type_, struct_format)
-
-        struct_values = list(range(len(struct_format)))
-        struct_packed = struct.pack(struct_format, *struct_values)
-        packet = Packet.unpack(struct_packed)
-
-        self.assertEqual(packet.placement.position.x, 0)
-        self.assertEqual(packet.placement.position.y, 1)
-        self.assertEqual(packet.placement.position.z, 2)
-        self.assertEqual(packet.placement.orientation.heading, 3)
-        self.assertEqual(packet.placement.orientation.pitch, 4)
-        self.assertEqual(packet.placement.orientation.roll, 5)
-        self.assertEqual(packet.placement._padding, 6)
-
-        self.assertEqual(packet.linear_velocity.x, 7)
-        self.assertEqual(packet.linear_velocity.y, 8)
-        self.assertEqual(packet.linear_velocity.z, 9)
-
-        self.assertEqual(packet.angular_velocity.x, 10)
-        self.assertEqual(packet.angular_velocity.y, 11)
-        self.assertEqual(packet.angular_velocity.z, 12)
-
-        self.assertEqual(packet.speed, 13)
-        self.assertEqual(packet.render_time, 14)
-        self.assertEqual(packet.simulation_time, 15)
-        self.assertEqual(packet.paused_simulation_time, 16)
-
-    # @unittest.skip("Game has to be started and shutdown manually")
+    @unittest.skip("Game has to be started manually")
     def test_telemetry(self):
-        # copy libtelemetry.so into $(HOME)/Library/Application Support/Steam/steamapps/common/American Truck Simulator/American Truck Simulator.app/Contents/MacOS/plugins/
-        # start this test
-        # run $(HOME)/Library/Application Support/Steam/steamapps/common/American Truck Simulator/American Truck Simulator.app/Contents/MacOS/amtrucks
-        # get into a truck and drive for a moment
-        # exit the game
+        # 1. Start this test.
+        # 2. Run ETS2/ATS with the telemetry plugin.
+        # 3. Get into a truck and drive for a moment.
+        # 4. Exit the game.
 
         context = zmq.Context()
+        data_socket = context.socket(zmq.SUB)
+        data_socket.setsockopt(zmq.SUBSCRIBE, bytes())
+        data_socket.connect(telemetry.Bind.data)
         event_socket = context.socket(zmq.SUB)
         event_socket.setsockopt(zmq.SUBSCRIBE, bytes())
-        event_socket.connect(Bind.event)
-        telemetry_socket = context.socket(zmq.SUB)
-        telemetry_socket.setsockopt(zmq.SUBSCRIBE, bytes())
-        telemetry_socket.connect(Bind.telemetry)
+        event_socket.connect(telemetry.Bind.event)
 
         poller = zmq.Poller()
+        poller.register(data_socket, flags=zmq.POLLIN)
         poller.register(event_socket, flags=zmq.POLLIN)
-        poller.register(telemetry_socket, flags=zmq.POLLIN)
 
-        event_socket = zmq.Context().socket(zmq.SUB)
-        event_socket.setsockopt(zmq.SUBSCRIBE, bytes())
-        event_socket.connect(Bind.event)
-        telemetry_socket = zmq.Context().socket(zmq.SUB)
-        telemetry_socket.setsockopt(zmq.SUBSCRIBE, bytes())
-        telemetry_socket.connect(Bind.telemetry)
+        count, event, events = 0, None, set()
+        while event != 'shutdown':
+            for socket, _ in poller.poll():
+                if socket == data_socket:
+                    message = data_socket.recv()
+                    data = telemetry.Data.from_bytes(message)
+                    count += 1
+                if socket == event_socket:
+                    message = event_socket.recv()
+                    event = telemetry.Event.from_bytes(message).type
+                    events.add(event)
 
-        counter = 100
-        init, config, start, pause, shutdown = False, False, False, False, False
-        for socket, message in poller.poll(timeout=10):
-            if socket == event_socket:
-                event = Event(message)
-                if event == Event.INIT:
-                    init = True
-                if event == Event.CONFIG:
-                    config = True
-                if event == Event.START:
-                    start = True
-                if event == Event.PAUSE:
-                    pause = True
-                if event == Event.SHUTDOWN:
-                    shutdown = True
-            if socket == telemetry_socket:
-                packet = Packet.unpack(message)
-                if counter == 0:
-                    break
-                counter -= 1
-
-        self.assertTrue(init)
-        self.assertTrue(config)
-        self.assertTrue(start)
-        self.assertTrue(pause)
-        self.assertTrue(shutdown)
-        self.assertEqual(counter, 0)
+        events.remove('init')  # ZMQ can be very peculiar, first PUB/SUB message is problematic.
+        self.assertEqual(events, {'config', 'start', 'pause', 'shutdown'})
+        self.assertGreater(count, 1)
 
 
 # endregion
