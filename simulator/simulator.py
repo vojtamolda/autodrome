@@ -1,9 +1,12 @@
 import abc
 import time
+import timeit
 import unittest
 import platform
 import subprocess
 from pathlib import Path
+
+from .window import Window
 
 
 class SimulatorABC(abc.ABC):
@@ -17,6 +20,7 @@ class SimulatorABC(abc.ABC):
     def __init__(self):
         self.steam_file = Path.cwd() / 'steam_appid.txt'
         self.process = None
+        self.window = None
 
     def start(self):
         """ Start the simulator process
@@ -26,9 +30,12 @@ class SimulatorABC(abc.ABC):
         self.enable_developer_console()
         self.steam_file.write_text(str(self.SteamAppID))
         self.process = subprocess.Popen(str(self.GameExecutable))
+        time.sleep(5)  # FIXME: Wait to receive ZMQ telemetry event message
+        self.window = Window(pid=self.process.pid)
 
     def stop(self):
         """ Stop the simulator process """
+        self.window = None
         self.process.terminate()
         self.steam_file.unlink()
 
@@ -105,19 +112,23 @@ class ATS(SimulatorABC):
 
 
 class TestSimulator(unittest.TestCase):
+    RepeatFPS = 100
+    MinimumFPS = 50
 
-    @unittest.skipIf(not ATS.RootGameFolder.exists(), "ATS is not installed")
+    @unittest.skipUnless(ATS.RootGameFolder.exists(), "ATS not installed")
     def test_ATS(self):
         ats = ATS()
         ats.start()
-        time.sleep(10)
+        seconds = timeit.timeit(lambda: ats.window.capture(), number=self.RepeatFPS)
+        self.assertGreater(self.RepeatFPS / seconds, self.MinimumFPS)
         ats.stop()
 
-    @unittest.skipIf(not ETS2.RootGameFolder.exists(), "ETS2 not installed")
+    @unittest.skipUnless(ETS2.RootGameFolder.exists(), "ETS2 not installed")
     def test_ETS2(self):
         ets2 = ETS2()
         ets2.start()
-        time.sleep(10)
+        seconds = timeit.timeit(lambda: ets2.window.capture(), number=self.RepeatFPS)
+        self.assertGreater(self.RepeatFPS / seconds, self.MinimumFPS)
         ets2.stop()
 
 
