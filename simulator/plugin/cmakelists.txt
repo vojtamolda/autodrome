@@ -1,8 +1,8 @@
 # Distributed under the MIT license.
 
 #.rst:
-# ETS2/ATS Game Telemetry Plugin for Polygon
-# ------------------------------------------
+# ETS2/ATS Game Telemetry Plugin for Autodrome
+# --------------------------------------------
 #
 # CMake receipt for building and installing the telemetry plugin for ETS2 and ATS games.
 #
@@ -20,7 +20,7 @@
 #
 
 cmake_minimum_required(VERSION 3.2)
-project(polygon-telemetry)
+project(autodrome-telemetry)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS)
@@ -69,7 +69,7 @@ add_library(telemetry
         MODULE ${SOURCE_FILES})
 target_link_libraries(telemetry ${LINK_LIBRARIES})
 target_include_directories(telemetry PUBLIC ${INCLUDE_DIRS})
-set_target_properties(telemetry PROPERTIES OUTPUT_NAME polygon)
+set_target_properties(telemetry PROPERTIES OUTPUT_NAME autodrome)
 
 
 option(ATS_DEPLOY "Deploy the telemetry plugin into ATS installation" TRUE)

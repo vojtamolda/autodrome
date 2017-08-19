@@ -187,12 +187,12 @@ bool Telemetry::check_version(const scs_telemetry_init_params_v100_t *const para
     if (string(SCS_GAME_ID_EUT2) == params->common.game_id) {
         const scs_u32_t MINIMAL_VERSION = SCS_TELEMETRY_EUT2_GAME_VERSION_1_00;
         if (params->common.game_version < MINIMAL_VERSION) {
-            this->log("[polygon] : incompatible (old) version of the game, please, update the game", SCS_LOG_TYPE_error);
+            this->log("[autodrome] : incompatible (old) version of the game, please, update the game", SCS_LOG_TYPE_error);
             return false;
         }
         const scs_u32_t IMPLEMENTED_VERSION = SCS_TELEMETRY_EUT2_GAME_VERSION_CURRENT;
         if (SCS_GET_MAJOR_VERSION(params->common.game_version) > SCS_GET_MAJOR_VERSION(IMPLEMENTED_VERSION)) {
-            this->log("[polygon] : incompatible (old) version of the telemetry SDK, please, update the SDK", SCS_LOG_TYPE_error);
+            this->log("[autodrome] : incompatible (old) version of the telemetry SDK, please, update the SDK", SCS_LOG_TYPE_error);
             return false;
         }
     }
@@ -200,12 +200,12 @@ bool Telemetry::check_version(const scs_telemetry_init_params_v100_t *const para
     if (string(SCS_GAME_ID_ATS) == params->common.game_id) {
         const scs_u32_t MINIMAL_VERSION = SCS_TELEMETRY_ATS_GAME_VERSION_1_00;
         if (params->common.game_version < MINIMAL_VERSION) {
-            this->log("[polygon] : incompatible (old) version of the game, please, update the game", SCS_LOG_TYPE_error);
+            this->log("[autodrome] : incompatible (old) version of the game, please, update the game", SCS_LOG_TYPE_error);
             return false;
         }
         const scs_u32_t IMPLEMENTED_VERSION = SCS_TELEMETRY_ATS_GAME_VERSION_CURRENT;
         if (SCS_GET_MAJOR_VERSION(params->common.game_version) > SCS_GET_MAJOR_VERSION(IMPLEMENTED_VERSION)) {
-            this->log("[polygon] : incompatible (old) version of the telemetry SDK, please, update the SDK", SCS_LOG_TYPE_error);
+            this->log("[autodrome] : incompatible (old) version of the telemetry SDK, please, update the SDK", SCS_LOG_TYPE_error);
             return false;
         }
     }
@@ -215,7 +215,7 @@ bool Telemetry::check_version(const scs_telemetry_init_params_v100_t *const para
 
 bool Telemetry::register_event(const scs_telemetry_init_params_v100_t *const params, const scs_event_t event, const scs_telemetry_event_callback_t callback) {
     if (params->register_for_event(event, callback, this) != SCS_RESULT_ok) {
-        string message = "[polygon] : unable to register for scs_event_t=" + to_string(event) + " event callback";
+        string message = "[autodrome] : unable to register for scs_event_t=" + to_string(event) + " event callback";
         this->log(message, SCS_LOG_TYPE_error);
         return false;
     }
@@ -224,7 +224,7 @@ bool Telemetry::register_event(const scs_telemetry_init_params_v100_t *const par
 
 bool Telemetry::register_channel(const scs_telemetry_init_params_v100_t *const params, const scs_string_t channel, const scs_value_type_t type, const scs_context_t context) {
     if (params->register_for_channel(channel, SCS_U32_NIL, type, SCS_TELEMETRY_CHANNEL_FLAG_none, Telemetry::channel_update, context) != SCS_RESULT_ok) {
-        string message = "[polygon] : unable to register for scs_telemetry_t=" + string(channel) + "' channel update";
+        string message = "[autodrome] : unable to register for scs_telemetry_t=" + string(channel) + "' channel update";
         this->log(message, SCS_LOG_TYPE_error);
         return false;
     }
