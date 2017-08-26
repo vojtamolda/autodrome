@@ -22,6 +22,7 @@ SCSSDK_HEADER
  *
  * Supported attributes:
  * @li id
+ * TODO: Whatever additional info necessary.
  */
 #define SCS_TELEMETRY_CONFIG_substances                         "substances"
 

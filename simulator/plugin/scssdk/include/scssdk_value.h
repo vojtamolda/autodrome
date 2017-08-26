@@ -32,7 +32,7 @@ const scs_value_type_t SCS_VALUE_TYPE_LAST              = SCS_VALUE_TYPE_string;
 //@{
 struct scs_value_bool_t
 {
-        scs_u8_t value; ///< Nonzero value is true, zero false.
+        scs_u8_t value; //< Nonzero value is true, zero false.
 };
 
 struct scs_value_s32_t
