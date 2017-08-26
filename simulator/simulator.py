@@ -2,11 +2,12 @@ import abc
 import time
 import timeit
 import unittest
+import argparse
 import platform
 import subprocess
 from pathlib import Path
 
-from .window import Window
+from window import Window
 
 
 class SimulatorABC(abc.ABC):
@@ -15,29 +16,40 @@ class SimulatorABC(abc.ABC):
     UserGameFolder = Path()
     GameExecutable = Path()
     SteamAppID = None
-    SCSExtractorExecutable = Path('simulator/bin/scs_extrator.exe')
+    SCSExtractorExecutable = Path('simulator/bin/scs_extractor.exe')
+    Config = {'g_developer': '1', 'g_console': '1',
+              'r_fullscreen': '0', 'r_mode_width': '1024', 'r_mode_height': '576'}
 
     def __init__(self):
-        self.steam_file = Path.cwd() / 'steam_appid.txt'
+        self.steam1_file = Path.cwd() / 'steam_appid.txt'
+        self.steam2_file = self.GameExecutable.parent / 'steam_appid.txt'
+        self.config_file = self.UserGameFolder / 'config.cfg'
         self.process = None
         self.window = None
 
-    def start(self):
-        """ Start the simulator process
-        The dirty little trick of creating 'steam_appid.txt' file with the Steam AppID prevents
-        SteamAPI_RestartAppIfNecessary(...) client API call to spawn a new process.
-        Details: https://partner.steamgames.com/doc/api/steam_api#SteamAPI_RestartAppIfNecessary """
-        self.enable_developer_console()
-        self.steam_file.write_text(str(self.SteamAppID))
-        self.process = subprocess.Popen(str(self.GameExecutable))
-        time.sleep(5)  # FIXME: Wait to receive ZMQ telemetry event message
-        self.window = Window(pid=self.process.pid)
+    def __enter__(self):
+        """ Start the simulator process """
+        self.set_config(self.config_file, self.Config)
+        self.set_steam(self.steam1_file, self.SteamAppID)
+        self.set_steam(self.steam2_file, self.SteamAppID)
+        try:
+            self.process = subprocess.Popen([str(self.GameExecutable), '-nointro', '-force_mods'])
+            time.sleep(5)  # FIXME: Wait to receive ZMQ telemetry event message
+            self.window = Window(pid=self.process.pid)
+        except Exception:
+            self.window = None
+            self.process.terminate()
+            return None
+        finally:
+            return self
 
-    def stop(self):
+    def __exit__(self, type, value, traceback):
         """ Stop the simulator process """
         self.window = None
         self.process.terminate()
-        self.steam_file.unlink()
+        self.steam1_file.unlink()
+        self.steam2_file.unlink()
+
 
     @classmethod
     def extract(cls):
@@ -55,23 +67,34 @@ class SimulatorABC(abc.ABC):
             subprocess.check_call(arguments)
 
     @classmethod
-    def enable_developer_console(cls):
-        """ Modify 'g_developer' and 'g_console' settings in the user config file to enable developer console. """
-        cfg_keys, cfg_lines = {'g_developer', 'g_console'}, []
-        with open(str(cls.UserGameFolder / 'config.cfg'), 'r') as cfg_file:
-            for cfg_line in cfg_file.readlines():
-                words = cfg_line.split()
-                if len(words) > 1 and words[1] in cfg_keys:
-                    cfg_lines.append('{words[0]} {words[1]} "1"'.format(words=words))
-                    cfg_keys.remove(words[1])
-                else:
-                    cfg_lines.append(cfg_line)
+    def set_steam(cls, file: Path, appid: int):
+        """ Setup a special Steam file
+        This little trick of creating 'steam_appid.txt' file with the Steam AppID prevents
+        SteamAPI_RestartAppIfNecessary(...) API call that would start a new process by forking
+        the Steam client application over which we would have no control.
 
-        for key in cfg_keys:
-            cfg_lines.append('uset ' + key + ' "1"')
+        Details: https://partner.steamgames.com/doc/api/steam_api#SteamAPI_RestartAppIfNecessary """
+        file.write_text(str(appid))
 
-        with open(str(cls.UserGameFolder / 'config.cfg'), 'w') as cfg_file:
-            cfg_file.writelines(cfg_lines)
+    @classmethod
+    def set_config(cls, file: Path, config: dict):
+        """ Modify existing ATS/ETS2 config file with the provided keys and values """
+        old_lines = file.read_text().splitlines()
+        config = config.copy()
+        new_lines = []
+
+        for line in old_lines:
+            words = line.split()
+            if len(words) > 1 and words[1] in config:
+                key, value = words[1], config[words[1]]
+                new_lines.append('uset {key} "{value}"'.format(key=key, value=value))
+                del config[key]
+            else:
+                new_lines.append(line)
+        for key, value in config.items():
+            new_lines.append('uset {key} "{value}"'.format(key=key, value=value))
+
+        file.write_text('\n'.join(new_lines))
 
 
 class ETS2(SimulatorABC):
@@ -108,6 +131,17 @@ class ATS(SimulatorABC):
     SteamAppID = 270880
 
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run ATS/ETS2 as a Self-Driving Car Simulator")
+    parser.add_argument('-g', '--game', help="Game to run", choices=['ATS', 'ETS2'], default='ATS')
+    args = parser.parse_args()
+
+    constructors = {'ATS': ATS, 'ETS2': ETS2}
+    with constructors[args.game]() as simulator:
+        while simulator.process.poll() is None:
+            time.sleep(1)
+
+
 # region Unit Tests
 
 
@@ -117,19 +151,17 @@ class TestSimulator(unittest.TestCase):
 
     @unittest.skipUnless(ATS.RootGameFolder.exists(), "ATS not installed")
     def test_ATS(self):
-        ats = ATS()
-        ats.start()
-        seconds = timeit.timeit(lambda: ats.window.capture(), number=self.RepeatFPS)
-        self.assertGreater(self.RepeatFPS / seconds, self.MinimumFPS)
-        ats.stop()
+        with ATS() as ats:
+            seconds = timeit.timeit(lambda: ats.window.capture(), number=self.RepeatFPS)
+            self.assertGreater(self.RepeatFPS / seconds, self.MinimumFPS)
+        time.sleep(1)
 
     @unittest.skipUnless(ETS2.RootGameFolder.exists(), "ETS2 not installed")
     def test_ETS2(self):
-        ets2 = ETS2()
-        ets2.start()
-        seconds = timeit.timeit(lambda: ets2.window.capture(), number=self.RepeatFPS)
-        self.assertGreater(self.RepeatFPS / seconds, self.MinimumFPS)
-        ets2.stop()
+        with ETS2() as ets2:
+            seconds = timeit.timeit(lambda: ets2.window.capture(), number=self.RepeatFPS)
+            self.assertGreater(self.RepeatFPS / seconds, self.MinimumFPS)
+        time.sleep(1)
 
 
 # endregion

@@ -2,6 +2,7 @@ import time
 import timeit
 import unittest
 import platform
+import warnings
 import contextlib
 import subprocess
 import numpy as np
@@ -12,6 +13,7 @@ from .window import WindowABC
 
 class WindowDarwin(WindowABC):
     """ Abstract window class for capture of game window content on macOS """
+    WindowTitleBarHeight = 22
 
     def __init__(self, pid: int):
         """ Create a new instance from main application window of a process """
@@ -26,10 +28,9 @@ class WindowDarwin(WindowABC):
         windows = [window for window in windows if window['kCGWindowOwnerPID'] == pid]
         if len(windows) == 0:
             raise WindowDarwinError("Main process window not found")
-        if len(windows) > 1:
-            raise WindowDarwinError("Multiple process windows found")
+
         if windows[0]['kCGWindowBounds'] == {'X': 0, 'Y': 0, 'Width': 0, 'Height': 0}:
-            raise WindowDarwinError("Invalid window found")
+            warnings.warn("No valid windows found", RuntimeWarning)
         self.window = windows[0]
 
     def capture(self) -> np.array:
@@ -44,13 +45,14 @@ class WindowDarwin(WindowABC):
         bytesPerRow = CG.CGImageGetBytesPerRow(screenshot)
 
         if width <= 1 and height <= 1:
-            return self.capture()  # This weirdness really sometimes happen. Retrying seems to work.
+            warnings.warn("Can't capture window because the process is minimized", RuntimeWarning)
+            return None
 
         dataProvider = CG.CGImageGetDataProvider(screenshot)
         rawPixels = CG.CGDataProviderCopyData(dataProvider)
         image = np.frombuffer(rawPixels, dtype=np.uint8).reshape([height, bytesPerRow // 4, 4])
 
-        return image[22:height, 0:width, 0:3]
+        return image[self.WindowTitleBarHeight:height, 0:width, 0:3]
 
 
 class WindowDarwinError(Exception):
