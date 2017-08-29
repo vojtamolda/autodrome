@@ -7,3 +7,9 @@ __pycache__/
 
 # Copy of common/ for CMake build of telemetry plugin
 simulator/plugin/common/*
+
+# Pesky macOS folder attributes
+.DS_Store
+
+# Steam app ID file after a crash
+steam_appid.txt
