@@ -1,7 +1,7 @@
 import abc
 
 
-class SteeringWheelABC(abc.ABC):
+class SteeringWheel(abc.ABC):
     """ Abstract controller class for interfacing with virtual steering wheels """
     class Axis:
         """ Controller axis helper for converting raw binary values
@@ -41,7 +41,7 @@ class SteeringWheelABC(abc.ABC):
         raise NotImplementedError
 
 
-class KeyboardABC(abc.ABC):
+class Keyboard(abc.ABC):
     """ Abstract controller class for interfacing with virtual keyboards """
     def type(self, string: str):
         """ Type string on the virtual keyboard """
