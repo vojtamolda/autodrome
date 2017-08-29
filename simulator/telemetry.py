@@ -2,6 +2,7 @@ import zmq
 import capnp
 import unittest
 
+from .simulator import ATS, ETS2
 import common.telemetry_capnp as telemetry
 
 
@@ -10,10 +11,9 @@ import common.telemetry_capnp as telemetry
 
 class TestTelemetry(unittest.TestCase):
 
-    @unittest.skip("Game has to be started manually")
     def test_telemetry(self):
         # 1. Start this test.
-        # 2. Run ETS2/ATS with the telemetry plugin.
+        # 2. Run ETS2/ATS with the telemetry telemetry.
         # 3. Get into a truck and drive for a moment.
         # 4. Exit the game.
 

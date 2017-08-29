@@ -120,6 +120,22 @@ class KeyboardDarwin(Keyboard):
         '`': 0x32,  # kVK_ANSI_Grave
         '*': 0x43,  # kVK_ANSI_KeypadMultiply
         '+': 0x45,  # kVK_ANSI_KeypadPlus
+        'f1':  0x7A,  # kVK_F1
+        'f2':  0x78,  # kVK_F2
+        'f3':  0x63,  # kVK_F3
+        'f4':  0x76,  # kVK_F4
+        'f5':  0x60,  # kVK_F5
+        'f6':  0x61,  # kVK_F6
+        'f7':  0x62,  # kVK_F7
+        'f8':  0x64,  # kVK_F8
+        'f9':  0x65,  # kVK_F9
+        'f10': 0x6D,  # kVK_F10
+        'f11':  0x67,  # kVK_F11
+        'f12': 0x6F,  # kVK_F12
+        '←': 0x7B,  # kVK_LeftArrow
+        '→': 0x7C,  # kVK_RightArrow
+        '↓': 0x7D,  # kVK_DownArrow
+        '↑': 0x7E,  # kVK_UpArrow
     }
 
     def press(self, key: str):
