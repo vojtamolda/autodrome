@@ -1,0 +1,9 @@
+SCSAnnotatedFileV1
+
+u32 sector_desc_version: 2
+fixed2 min_boundary: i-1024000 i-512 # x:-4000 y:-2
+fixed2 max_boundary: i512 i1024000 # x:2 y:4000
+u32 flags: 0
+token climate_profile: "default"
+
+# EOF #

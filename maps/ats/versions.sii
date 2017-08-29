@@ -1,0 +1,13 @@
+SiiNunit
+{
+
+package_version_info : .latest {
+    package_name: "autodrome"
+}
+
+package_version_info : .autodrome {
+    package_name: "autodrome"
+    compatible_versions[]: "1.6.*"
+}
+
+}

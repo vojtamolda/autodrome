@@ -1,9 +1,0 @@
-SCSAnnotatedFileV1
-
-u32 sector_desc_version: 2
-fixed2 min_bounds: i0 i-1024000 # x:0 y:-4000
-fixed2 max_bounds: i1024000 i0 # x:4000 y:0
-u32 flags: 0
-token climate_profile: "default"
-
-# EOF #

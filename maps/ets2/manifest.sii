@@ -1,0 +1,12 @@
+SiiNunit {
+
+mod_package : .package_name {
+    package_version: "0.1"
+    display_name: "Autodrome"
+    author: "Vojta Molda"
+    category[]: "map"
+    icon: "autodrome.jpg"
+    description_file: "autodrome.txt"
+}
+
+}

@@ -1,0 +1,85 @@
+SCSAnnotatedFileV1
+
+u32 core_map_version: 854
+token game_id: "euro2"
+u32 game_map_version: 2
+u32 item_count: 1
+array_struct items [
+    struct core_road_item {
+        struct kdop_item {
+            u32 item_type: 3
+            u64 uid: x2958FC90F2800001
+            struct kdop {
+                array_float minimums [
+                    &c38f2000 # -286.25
+                    &c17c0000 # -15.75
+                    &bf400000 # -0.75
+                    &c30f5100 # -143.316
+                    &c347e800 # -199.906
+                ]
+                array_float maximums [
+                    &3f400000 # 0.75
+                    &417c0000 # 15.75
+                    &438f2000 # 286.25
+                    &430f5100 # 143.316
+                    &c25dbc00 # -55.4336
+                ]
+            }
+            u32 flags: 20971520
+            u8 type_info: 17
+        }
+        u32 road_flags: 0
+        token road_look: "us_tmpl12"
+        token right_tmpl_variant: "brd_brk"
+        token left_tmpl_variant: ""
+        token right_edge_right: ""
+        token right_edge_left: ""
+        token left_edge_right: ""
+        token left_edge_left: ""
+        token right_profile: "profile0"
+        float right_profile_coef: &3f800000 # 1
+        token left_profile: "profile0"
+        float left_profile_coef: &3f800000 # 1
+        token right_tmpl_look: "asphalt"
+        token left_tmpl_look: ""
+        token road_material: "0"
+        token right_railing: "154"
+        s16 right_railing_offset: 800
+        token left_railing: "154"
+        s16 left_railing_offset: 550
+        token right_railing: ""
+        s16 right_railing_offset: 0
+        token left_railing: ""
+        s16 left_railing_offset: 0
+        token right_railing: ""
+        s16 right_railing_offset: 0
+        token left_railing: ""
+        s16 left_railing_offset: 0
+        s32 right_road_height: 0
+        s32 left_road_height: 0
+        u64 node0_uid: x2958FD9C50000000
+        u64 node1_uid: x2958FC9073C00000
+        float length: &439ba333 # 311.275
+    }
+]
+u32 node_count: 2
+array_struct nodes [
+    struct node_item {
+        u64 uid: x2958FD9C50000000
+        fixed3 position: i0 i0 i51200 # x:0 y:0 z:200
+        quaternion rotation: &3f3504f3 &00000000 &3f3504f3 &00000000 # w:0.707107 x:0 y:0.707107 z:0
+        u64 backward_item_uid: x2958FD9C1D000001
+        u64 forward_item_uid: x2958FC90F2800001
+        u32 flags: 1
+    }
+    struct node_item {
+        u64 uid: x2958FC9073C00000
+        fixed3 position: i-51200 i0 i0 # x:-200 y:0 z:0
+        quaternion rotation: &3f800000 &00000000 &00000000 &00000000 # w:1 x:0 y:0 z:0
+        u64 backward_item_uid: x2958FC90F2800001
+        u64 forward_item_uid: x2958FEA40D000001
+        u32 flags: 1
+    }
+]
+
+# EOF #

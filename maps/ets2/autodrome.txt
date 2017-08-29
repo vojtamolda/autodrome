@@ -1,0 +1,12 @@
+Autodrome Maps for Euro Truck Simulator 2
+
+To drive on a map run:
+~ preview indy500
+
+To open a map run:
+~ edit indy500
+
+To save a map do the following:
+- Export map to OBJ (Ctrl-E)
+~ edit_save_text indy500.txt
+~ edit_save indy500

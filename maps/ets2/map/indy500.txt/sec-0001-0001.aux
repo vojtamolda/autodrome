@@ -1,0 +1,117 @@
+SCSAnnotatedFileV1
+
+u32 core_map_version: 854
+token game_id: "euro2"
+u32 game_map_version: 2
+u32 item_count: 2
+array_struct items [
+    struct sign_item {
+        struct kdop_item {
+            u32 item_type: 36
+            u64 uid: x296A3AA0F0800001
+            struct kdop {
+                array_float minimums [
+                    &c34ff100 # -207.941
+                    &c0300000 # -2.75
+                    &bf710000 # -0.941406
+                    &c2d08400 # -104.258
+                    &c2d08400 # -104.258
+                ]
+                array_float maximums [
+                    &c33d1000 # -189.063
+                    &413da000 # 11.8516
+                    &3fa38000 # 1.27734
+                    &c2bc7c00 # -94.2422
+                    &c2bc7c00 # -94.2422
+                ]
+            }
+            u32 flags: 0
+            u8 type_info: 18
+        }
+        token sign_model: "766"
+        u64 node_uid: x296A3AA0C2C00000
+        array_struct sign_boards [
+            struct sign_board {
+                token road: ""
+                token city1: ""
+                token city2: ""
+            }
+            struct sign_board {
+                token road: ""
+                token city1: ""
+                token city2: ""
+            }
+            struct sign_board {
+                token road: ""
+                token city1: ""
+                token city2: ""
+            }
+        ]
+        string override_template: ""
+    }
+    struct sign_item {
+        struct kdop_item {
+            u32 item_type: 36
+            u64 uid: x296A3AC48C400001
+            struct kdop {
+                array_float minimums [
+                    &bfa38000 # -1.27734
+                    &c0300000 # -2.75
+                    &c34ff100 # -207.941
+                    &c2d08400 # -104.258
+                    &42bc7c00 # 94.2422
+                ]
+                array_float maximums [
+                    &3f710000 # 0.941406
+                    &413da000 # 11.8516
+                    &c33d1000 # -189.063
+                    &c2bc7c00 # -94.2422
+                    &42d08400 # 104.258
+                ]
+            }
+            u32 flags: 16777216
+            u8 type_info: 18
+        }
+        token sign_model: "766"
+        u64 node_uid: x296A3AC46F800000
+        array_struct sign_boards [
+            struct sign_board {
+                token road: ""
+                token city1: ""
+                token city2: ""
+            }
+            struct sign_board {
+                token road: ""
+                token city1: ""
+                token city2: ""
+            }
+            struct sign_board {
+                token road: ""
+                token city1: ""
+                token city2: ""
+            }
+        ]
+        string override_template: ""
+    }
+]
+u32 node_count: 2
+array_struct nodes [
+    struct node_item {
+        u64 uid: x296A3AA0C2C00000
+        fixed3 position: i-52992 i0 i0 # x:-207 y:0 z:0
+        quaternion rotation: &3f800000 &00000000 &00000000 &00000000 # w:1 x:0 y:0 z:0
+        u64 backward_item_uid: x0
+        u64 forward_item_uid: x296A3AA0F0800001
+        u32 flags: 1
+    }
+    struct node_item {
+        u64 uid: x296A3AC46F800000
+        fixed3 position: i0 i0 i-52992 # x:0 y:0 z:-207
+        quaternion rotation: &bf3504f3 &00000000 &3f3504f3 &00000000 # w:-0.707107 x:0 y:0.707107 z:0
+        u64 backward_item_uid: x0
+        u64 forward_item_uid: x296A3AC48C400001
+        u32 flags: 5
+    }
+]
+
+# EOF #

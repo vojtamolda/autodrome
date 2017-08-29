@@ -1,1 +1,0 @@
-This is a sample mod by [red]SCS Software[normal] which we are shipping to show you how to adjust your mod to new standards.
