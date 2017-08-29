@@ -1,2 +1,3 @@
 pyobjc
+pybojc-framework-Cocoa
 pyobjc-framework-Quartz

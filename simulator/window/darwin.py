@@ -6,14 +6,15 @@ import warnings
 import contextlib
 import subprocess
 import numpy as np
+import Cocoa as CA
 import Quartz.CoreGraphics as CG
 
-from .window import WindowABC
+from .window import Window
 
 
-class WindowDarwin(WindowABC):
+class WindowDarwin(Window):
     """ Abstract window class for capture of game window content on macOS """
-    WindowTitleBarHeight = 22
+    TitleBarHeight = 22
 
     def __init__(self, pid: int):
         """ Create a new instance from main application window of a process """
@@ -32,6 +33,14 @@ class WindowDarwin(WindowABC):
         if windows[0]['kCGWindowBounds'] == {'X': 0, 'Y': 0, 'Width': 0, 'Height': 0}:
             warnings.warn("No valid windows found", RuntimeWarning)
         self.window = windows[0]
+
+    def activate(self):
+        """ Bring window to foreground """
+
+        runningApplication = CA.NSRunningApplication.runningApplicationWithProcessIdentifier_(self.pid)
+        activationOptions = CA.NSApplicationActivateAllWindows | CA.NSApplicationActivateIgnoringOtherApps
+        runningApplication.activateWithOptions_(activationOptions)
+        time.sleep(0.25)
 
     def capture(self) -> np.array:
         """ Capture border-less window content and return it as a raw pixel array """
@@ -52,7 +61,7 @@ class WindowDarwin(WindowABC):
         rawPixels = CG.CGDataProviderCopyData(dataProvider)
         image = np.frombuffer(rawPixels, dtype=np.uint8).reshape([height, bytesPerRow // 4, 4])
 
-        return image[self.WindowTitleBarHeight:height, 0:width, 0:3]
+        return image[self.TitleBarHeight:height, 0:width, 0:3]
 
 
 class WindowDarwinError(Exception):
