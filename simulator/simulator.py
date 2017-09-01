@@ -7,6 +7,7 @@ import distutils.dir_util as dstdir
 
 from .window import Window
 from .controller import Keyboard
+from autodrome.simulator.telemetry import Telemetry
 
 
 class Simulator(abc.ABC):
@@ -30,10 +31,11 @@ class Simulator(abc.ABC):
         self.process = None
         self.window = None
         self.keyboard = None
+        self.telemetry = None
 
     def start(self):
-        """ Setup and start the simulator process """
-        self.setup_telemetry(self.TelemetryPlugin)
+        """ Setup, start the simulator process and connect telemetry plugin """
+        self.setup_plugin(self.TelemetryPlugin)
         self.setup_maps(self.mod_dir, self.MapsFolder)
         self.setup_config(self.config_file, self.Config)
         self.setup_steam(self.steam1_file)
@@ -42,12 +44,14 @@ class Simulator(abc.ABC):
         print("Starting game process '{}'...".format(self.GameExecutable))
         game_command = [str(self.GameExecutable), '-nointro', '-force_mods', '-noworkshop', '-window_pos', '0', '0']
         self.process = subprocess.Popen(game_command)
-        time.sleep(5)  # FIXME: Wait to receive ZMQ telemetry 'init' event message instead of sleep
+        time.sleep(3)  # FIXME Add waiting loop into the window constructor
         self.window = Window(pid=self.process.pid)
         self.keyboard = Keyboard()
+        self.telemetry = Telemetry()
 
         self.window.activate()
         self.enter()  # Get rid of pesky Telemetry SDK warning
+        self.telemetry.wait(Telemetry.Event.load)
 
     def __enter__(self):
         self.start()
@@ -61,7 +65,7 @@ class Simulator(abc.ABC):
         dstdir.copy_tree(str(local_dir), str(mod_dir))
 
     @classmethod
-    def setup_telemetry(cls, telemetry_lib: Path):
+    def setup_plugin(cls, telemetry_lib: Path):
         """ Copy Telemetry SDK library into ATS/ETS2 telemetry folder """
         destination_dir = cls.GameExecutable.parent / 'plugins'
         print("Setting up telemetry plugin in '{}'...".format(destination_dir))

@@ -1,49 +1,34 @@
 import zmq
 import capnp
-import unittest
 
-from .simulator import ATS, ETS2
-import common.telemetry_capnp as telemetry
+from autodrome.common.telemetry_capnp import Bind, Response, Request
 
 
-# region Unit Tests
+class Telemetry:
 
+    Event = Response.Event
 
-class TestTelemetry(unittest.TestCase):
+    def __init__(self, address: str=Bind.address):
+        self.address = address
+        ctx = zmq.Context()
+        self.socket = ctx.socket(zmq.REQ)
+        self.socket.connect(Bind.address)
 
-    def test_telemetry(self):
-        # 1. Start this test.
-        # 2. Run ETS2/ATS with the telemetry telemetry.
-        # 3. Get into a truck and drive for a moment.
-        # 4. Exit the game.
+    def receive(self) -> Response:
+        request = Request.new_message()
+        request_message = request.to_bytes()
+        self.socket.send(request_message)
+        reply_message = self.socket.recv()
+        reply = Response.from_bytes(reply_message)
+        return reply
 
-        context = zmq.Context()
-        data_socket = context.socket(zmq.SUB)
-        data_socket.setsockopt(zmq.SUBSCRIBE, bytes())
-        data_socket.connect(telemetry.Bind.data)
-        event_socket = context.socket(zmq.SUB)
-        event_socket.setsockopt(zmq.SUBSCRIBE, bytes())
-        event_socket.connect(telemetry.Bind.event)
+    def wait(self, event: Event) -> Response:
+        reply = self.receive()
+        while reply.event != event:
+            reply = self.receive()
+        return reply
 
-        poller = zmq.Poller()
-        poller.register(data_socket, flags=zmq.POLLIN)
-        poller.register(event_socket, flags=zmq.POLLIN)
+    def telemetry(self) -> Response.Telemetry:
+        reply = self.wait(event=self.Event.frameEnd)
+        return reply.data
 
-        count, event, events = 0, None, set()
-        while event != 'shutdown':
-            for socket, _ in poller.poll():
-                if socket == data_socket:
-                    message = data_socket.recv()
-                    data = telemetry.Data.from_bytes(message)
-                    count += 1
-                if socket == event_socket:
-                    message = event_socket.recv()
-                    event = telemetry.Event.from_bytes(message).type
-                    events.add(event)
-
-        events.remove('init')  # ZMQ can be very peculiar, first PUB/SUB message is problematic.
-        self.assertEqual(events, {'config', 'start', 'pause', 'shutdown'})
-        self.assertGreater(count, 1)
-
-
-# endregion

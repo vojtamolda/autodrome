@@ -2,13 +2,16 @@
 
 
 Telemetry::Telemetry(const scs_telemetry_init_params_v100_t *const params, const scs_u32_t version) :
-    paused(true), game_log(params->common.log),
-    zmq_context(1),
-    event_socket(zmq_context, ZMQ_PUB), event_packet(),
-    data_socket(zmq_context, ZMQ_PUB), data_packet()
+    paused(true), print(params->common.log),
+    zmq_context(1), data_socket(zmq_context, ZMQ_REP), message_builder()
 {
-    if (! this->check_version(params, version)) {
+    if (!this->check_version(params, version)) {
         throw exception();
+    }
+    if (!this->check_steamid()) {
+        this->data_socket.close();
+        this->zmq_context.close();
+        return;
     }
 
     this->register_event(params, SCS_TELEMETRY_EVENT_configuration, Telemetry::config_callback);
@@ -30,88 +33,123 @@ Telemetry::Telemetry(const scs_telemetry_init_params_v100_t *const params, const
     // SCS_TELEMETRY_TRUCK_CHANNEL_navigation_speed_limit
     // ...
 
-    this->data_packet.initRoot<Data>();
-    this->data_socket.bind(Bind::DATA.toString());
+    this->data_socket.bind(Bind::ADDRESS.toString());
+    auto response = this->message_builder.initRoot<Response>();
+    response.initData();
 
-    this->event_packet.initRoot<Event>();
-    this->event_socket.bind(Bind::EVENT.toString());
-    this->event_packet.getRoot<Event>().setType(Event::Type::INIT);
-    this->event_socket.send(this->event_packet);
+    //auto request = this->socket.recv();
+    auto message = message_t();
+    auto sock = (socket_t*) &(this->data_socket);
+    sock->recv(&message);
+    response.setEvent(Response::Event::LOAD);
+    response.getData().setNone();
+    this->data_socket.send(this->message_builder);
 }
 
 void Telemetry::config(const struct scs_telemetry_configuration_t *const config_info) {
-    this->event_packet.getRoot<Event>().setType(Event::Type::CONFIG);
-    this->event_socket.send(this->event_packet);
+    auto request = this->data_socket.recv();
+    auto response = this->message_builder.getRoot<Response>();
+    response.setEvent(Response::Event::CONFIG);
+    auto config = response.getData().initConfig();
+    config.setNotImplemented();
+    this->data_socket.send(this->message_builder);
 }
 
 void Telemetry::start() {
     this->paused = false;
 
-    this->event_packet.getRoot<Event>().setType(Event::Type::START);
-    this->event_socket.send(this->event_packet);
+    auto request = this->data_socket.recv();
+    auto response = this->message_builder.getRoot<Response>();
+    response.setEvent(Response::Event::START);
+    response.getData().setNone();
 }
 
 void Telemetry::frame_start(const struct scs_telemetry_frame_start_t *const frame_start_info) {
     if (this->paused) return;
 
-    Data::Builder data = this->data_packet.getRoot<Data>();
-    data.setPausedSimulationTime(frame_start_info->paused_simulation_time);
-    data.setSimulationTime(frame_start_info->simulation_time);
-    data.setRenderTime(frame_start_info->render_time);
+    auto request = this->data_socket.recv();
+    auto response = this->message_builder.getRoot<Response>();
+    response.setEvent(Response::Event::FRAME_START);
+    response.getData().setNone();
+    this->data_socket.send(this->message_builder);
+
+    // Prepare telemetry data for channel_update(...) callbacks
+    auto telemetry = response.getData().initTelemetry();
+    telemetry.setPausedSimulationTime(frame_start_info->paused_simulation_time);
+    telemetry.setSimulationTime(frame_start_info->simulation_time);
+    telemetry.setRenderTime(frame_start_info->render_time);
 }
 
 void Telemetry::frame_end() {
     if (this->paused) return;
 
-    this->data_socket.send(this->data_packet);
+    auto request = this->data_socket.recv();
+    auto response = this->message_builder.getRoot<Response>();
+    response.setEvent(Response::Event::FRAME_END);
+    // Telemetry data were set by channel_update(...) callbacks
+    this->data_socket.send(this->message_builder);
 }
 
 void Telemetry::pause() {
     this->paused = true;
 
-    this->event_packet.getRoot<Event>().setType(Event::Type::PAUSE);
-    this->event_socket.send(this->event_packet);
+    auto request = this->data_socket.recv();
+    auto response = this->message_builder.getRoot<Response>();
+    response.setEvent(Response::Event::PAUSE);
+    response.getData().setNone();
+    this->data_socket.send(this->message_builder);
 }
 
 Telemetry::~Telemetry() {
-    this->event_packet.getRoot<Event>().setType(Event::Type::SHUTDOWN);
-    this->event_socket.send(this->event_packet);
+    if (! this->zmq_context) return;
+
+    auto request = this->data_socket.recv();
+    auto response = this->message_builder.getRoot<Response>();
+    response.setEvent(Response::Event::UNLOAD);
+    response.getData().setNone();
+    this->data_socket.send(this->message_builder);
+
+    this->data_socket.unbind(*Bind::ADDRESS);
+    this->data_socket.close();
+    this->zmq_context.close();
 }
 
 
-SCSAPI_VOID Telemetry::config_callback(const scs_event_t event, const void *const event_info, const scs_context_t context) {
-    const struct scs_telemetry_configuration_t *const config_info = static_cast<const scs_telemetry_configuration_t*>(event_info);
+SCSAPI_VOID Telemetry::config_callback(const scs_event_t event, const void *const event_info, scs_context_t const context) {
+    const auto config_info = static_cast<const scs_telemetry_configuration_t*>(event_info);
     static_cast<Telemetry*>(context)->config(config_info);
 }
 
-SCSAPI_VOID Telemetry::start_callback(const scs_event_t event, const void *const event_info, const scs_context_t context) {
+SCSAPI_VOID Telemetry::start_callback(const scs_event_t event, const void *const event_info, scs_context_t const context) {
     static_cast<Telemetry*>(context)->start();
 }
 
-SCSAPI_VOID Telemetry::frame_start_callback(const scs_event_t event, const void *const event_info, const scs_context_t context) {
-    const struct scs_telemetry_frame_start_t *const frame_start_info = static_cast<const scs_telemetry_frame_start_t*>(event_info);
+SCSAPI_VOID Telemetry::frame_start_callback(const scs_event_t event, const void *const event_info, scs_context_t const context) {
+    const auto frame_start_info = static_cast<const scs_telemetry_frame_start_t*>(event_info);
     static_cast<Telemetry*>(context)->frame_start(frame_start_info);
 }
 
-SCSAPI_VOID Telemetry::frame_end_callback(const scs_event_t event, const void *const event_info, const scs_context_t context) {
+SCSAPI_VOID Telemetry::frame_end_callback(const scs_event_t event, const void *const event_info, scs_context_t const context) {
     static_cast<Telemetry*>(context)->frame_end();
 }
 
-SCSAPI_VOID Telemetry::pause_callback(const scs_event_t event, const void *const event_info, const scs_context_t context) {
-    static_cast<Telemetry*>(context)->pause();
+SCSAPI_VOID Telemetry::pause_callback(const scs_event_t event, const void *const event_info, scs_context_t const context) {
+    static_cast<Telemetry *>(context)->pause();
 }
 
 SCSAPI_VOID Telemetry::channel_update(const scs_string_t channel, const scs_u32_t index, const scs_value_t *const value, const scs_context_t context) {
-    Data::Builder data = static_cast<Telemetry *>(context)->data_packet.getRoot<Data>();
+    Telemetry* self = static_cast<Telemetry *>(context);
+    auto response = self->message_builder.getRoot<Response>();
+    auto telemetry = response.getData().getTelemetry();
 
     if (string(SCS_TELEMETRY_TRUCK_CHANNEL_world_placement) == channel) {
-        Helper::set(data.getWorldPlacement(), value);
+        Helper::set(telemetry.getWorldPlacement(), value);
     } else if (string(SCS_TELEMETRY_TRUCK_CHANNEL_local_linear_velocity) == channel) {
-        Helper::set(data.getLocalLinearVelocity(), value);
+        Helper::set(telemetry.getLocalLinearVelocity(), value);
     } else if (string(SCS_TELEMETRY_TRUCK_CHANNEL_local_angular_velocity) == channel) {
-        Helper::set(data.getLocalAngularVelocity(), value);
+        Helper::set(telemetry.getLocalAngularVelocity(), value);
     } else if (string(SCS_TELEMETRY_TRUCK_CHANNEL_speed) == channel) {
-        data.setSpeed(value->value_double.value);
+        telemetry.setSpeed(value->value_double.value);
     }
 }
 
@@ -168,15 +206,44 @@ Telemetry::capnp_socket_t::capnp_socket_t(context_t& context, int type) :
 {/*   ¯\(°_o)/¯   */}
 
 size_t Telemetry::capnp_socket_t::send(capnp::MessageBuilder &message) {
-    auto words = capnp::messageToFlatArray(message);
-    auto bytes = words.asBytes();
-    return socket_t::send(bytes.begin(), bytes.size(), 0);
+    try {
+        auto words = capnp::messageToFlatArray(message);
+        auto bytes = words.asBytes();
+        return socket_t::send(bytes.begin(), bytes.size(), 0);
+    } catch (zmq::error_t &error) {
+        return 0;
+        // this->log("[autodrome] : error during zmq recv(...)");
+    }
+}
+
+unique_ptr<message_t> Telemetry::capnp_socket_t::recv() {
+    try {
+        auto message = unique_ptr<message_t>(new message_t());
+        socket_t::recv(message.get());
+        return message;
+    } catch (zmq::error_t &error) {
+        return unique_ptr<message_t>(new message_t());
+        // this->log("[autodrome] : error during zmq recv(...)");
+    }
 }
 
 
 void Telemetry::log(const string& message, const scs_log_type_t type) const {
-    if (!this->game_log) return;
-    this->game_log(type, message.c_str());
+    if (!this->print) return;
+    this->print(type, message.c_str());
+}
+
+#include <unistd.h>
+
+bool Telemetry::check_steamid() const {
+    ifstream steam_appid_file("MacOS/steam_appid.txt");
+    if (steam_appid_file.is_open()) {
+        steam_appid_file.close();
+        return true;
+    } else {
+        this->log("[autodrome] : disabling telemetry SDK, standalone run detected", SCS_LOG_TYPE_warning);
+        return false;
+    }
 }
 
 bool Telemetry::check_version(const scs_telemetry_init_params_v100_t *const params, const scs_u32_t version) const {

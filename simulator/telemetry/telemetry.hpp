@@ -1,4 +1,5 @@
 #include <string>
+#include <fstream>
 
 #include <zmq.hpp>
 #include <capnp/message.h>
@@ -19,7 +20,7 @@ class Telemetry {
 
 public:
     Telemetry(const scs_telemetry_init_params_v100_t *const params, const scs_u32_t version);
-    void config(const struct scs_telemetry_configuration_t *const configuration_info);
+    void config(const struct scs_telemetry_configuration_t *const config_info);
     void start();
     void frame_start(const struct scs_telemetry_frame_start_t *const frame_start_info);
     void frame_end();
@@ -28,11 +29,11 @@ public:
 
     static SCSAPI_VOID channel_update(const scs_string_t channel, const scs_u32_t index, const scs_value_t *const value, const scs_context_t context);
 
-    static SCSAPI_VOID config_callback(const scs_event_t event, const void *const event_info, const scs_context_t context);
-    static SCSAPI_VOID start_callback(const scs_event_t event, const void *const event_info, const scs_context_t context);
-    static SCSAPI_VOID frame_start_callback(const scs_event_t event, const void *const event_info, const scs_context_t context);
-    static SCSAPI_VOID frame_end_callback(const scs_event_t event, const void *const event_info, const scs_context_t context);
-    static SCSAPI_VOID pause_callback(const scs_event_t event, const void *const event_info, const scs_context_t context);
+    static SCSAPI_VOID config_callback(const scs_event_t event, const void *const event_info, scs_context_t const context);
+    static SCSAPI_VOID start_callback(const scs_event_t event, const void *const event_info, scs_context_t const context);
+    static SCSAPI_VOID frame_start_callback(const scs_event_t event, const void *const event_info, scs_context_t const context);
+    static SCSAPI_VOID frame_end_callback(const scs_event_t event, const void *const event_info, scs_context_t const context);
+    static SCSAPI_VOID pause_callback(const scs_event_t event, const void *const event_info, scs_context_t const context);
 
 protected:
     class Helper {
@@ -48,18 +49,18 @@ protected:
     public:
         capnp_socket_t(context_t& context, int type);
         size_t send(capnp::MessageBuilder &message);
+        unique_ptr<message_t> recv();
     };
 
     context_t zmq_context;
-    capnp_socket_t event_socket;
-    capnp::MallocMessageBuilder event_packet;
     capnp_socket_t data_socket;
-    capnp::MallocMessageBuilder data_packet;
+    capnp::MallocMessageBuilder message_builder;
 
     bool paused;
-    const scs_log_t game_log;
+    const scs_log_t print;
 
     void log(const string& message, const scs_log_type_t type=SCS_LOG_TYPE_message) const;
+    bool check_steamid() const;
     bool check_version(const scs_telemetry_init_params_v100_t *const params, const scs_u32_t version) const;
     bool register_event(const scs_telemetry_init_params_v100_t *const params, const scs_event_t event, const scs_telemetry_event_callback_t callback);
     bool register_channel(const scs_telemetry_init_params_v100_t *const params, const scs_string_t channel, const scs_value_type_t type, const scs_context_t context);

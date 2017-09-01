@@ -70,7 +70,8 @@ add_library(telemetry
 target_link_libraries(telemetry ${LINK_LIBRARIES})
 target_include_directories(telemetry PUBLIC ${INCLUDE_DIRS})
 set_target_properties(telemetry PROPERTIES OUTPUT_NAME autodrome)
-
+install(TARGETS telemetry
+        DESTINATION "${CMAKE_SOURCE_DIR}/plugin/")
 
 option(ATS_DEPLOY "Deploy the telemetry plugin into ATS installation" TRUE)
 if (ATS_DEPLOY)
