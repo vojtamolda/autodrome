@@ -47,9 +47,11 @@ protected:
 
     class capnp_socket_t: public socket_t {
     public:
-        capnp_socket_t(context_t& context, int type);
+        capnp_socket_t(context_t& context, int type, const Telemetry& telemetry);
         size_t send(capnp::MessageBuilder &message);
         unique_ptr<message_t> recv();
+    private:
+        const Telemetry& telemetry;
     };
 
     context_t zmq_context;

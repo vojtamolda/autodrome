@@ -112,9 +112,9 @@ class Simulator(abc.ABC):
             self.keyboard.release('→')
             self.keyboard.release('←')
         if steer > 0:
-            self.keyboard.press('→')
-        if steer < 0:
             self.keyboard.press('←')
+        if steer < 0:
+            self.keyboard.press('→')
         if acceleration == 0:
             self.keyboard.release('↑')
             self.keyboard.release('↓')

@@ -3,7 +3,7 @@
 
 Telemetry::Telemetry(const scs_telemetry_init_params_v100_t *const params, const scs_u32_t version) :
     paused(true), print(params->common.log),
-    zmq_context(1), data_socket(zmq_context, ZMQ_REP), message_builder()
+    zmq_context(1), data_socket(zmq_context, ZMQ_REP, *this), message_builder()
 {
     if (!this->check_version(params, version)) {
         throw exception();
@@ -23,24 +23,23 @@ Telemetry::Telemetry(const scs_telemetry_init_params_v100_t *const params, const
     this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_world_placement, SCS_VALUE_TYPE_dplacement, this);
     this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_local_linear_velocity, SCS_VALUE_TYPE_dvector, this);
     this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_local_angular_velocity, SCS_VALUE_TYPE_dvector, this);
-    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_speed, SCS_VALUE_TYPE_double, this);
-    // SCS_TELEMETRY_TRUCK_CHANNEL_effective_steering
-    // SCS_TELEMETRY_TRUCK_CHANNEL_effective_throttle
-    // SCS_TELEMETRY_TRUCK_CHANNEL_effective_brake
-    // SCS_TELEMETRY_TRUCK_CHANNEL_cruise_control
-    // SCS_TELEMETRY_TRUCK_CHANNEL_lblinker
-    // SCS_TELEMETRY_TRUCK_CHANNEL_rblinker
-    // SCS_TELEMETRY_TRUCK_CHANNEL_navigation_speed_limit
-    // ...
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_speed, SCS_VALUE_TYPE_float, this);
+
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_effective_steering, SCS_VALUE_TYPE_float, this);
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_effective_throttle, SCS_VALUE_TYPE_float, this);
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_effective_brake, SCS_VALUE_TYPE_float, this);
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_parking_brake, SCS_VALUE_TYPE_bool, this);
+
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_wear_engine, SCS_VALUE_TYPE_float, this);
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_wear_transmission, SCS_VALUE_TYPE_float, this);
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_wear_cabin, SCS_VALUE_TYPE_float, this);
+    this->register_channel(params, SCS_TELEMETRY_TRUCK_CHANNEL_wear_chassis, SCS_VALUE_TYPE_float, this);
 
     this->data_socket.bind(Bind::ADDRESS.toString());
     auto response = this->message_builder.initRoot<Response>();
     response.initData();
 
-    //auto request = this->socket.recv();
-    auto message = message_t();
-    auto sock = (socket_t*) &(this->data_socket);
-    sock->recv(&message);
+    auto request = this->data_socket.recv();
     response.setEvent(Response::Event::LOAD);
     response.getData().setNone();
     this->data_socket.send(this->message_builder);
@@ -150,7 +149,27 @@ SCSAPI_VOID Telemetry::channel_update(const scs_string_t channel, const scs_u32_
     } else if (string(SCS_TELEMETRY_TRUCK_CHANNEL_local_angular_velocity) == channel) {
         Helper::set(telemetry.getLocalAngularVelocity(), value);
     } else if (string(SCS_TELEMETRY_TRUCK_CHANNEL_speed) == channel) {
-        telemetry.setSpeed(value->value_double.value);
+        telemetry.setSpeed(value->value_float.value);
+    }
+
+    if (string(SCS_TELEMETRY_TRUCK_CHANNEL_effective_steering) == channel) {
+        telemetry.setEffectiveSteering(value->value_float.value);
+    } else if (string(SCS_TELEMETRY_TRUCK_CHANNEL_effective_throttle) == channel) {
+        telemetry.setEffectiveThrottle(value->value_float.value);
+    } else if (string(SCS_TELEMETRY_TRUCK_CHANNEL_effective_brake) == channel) {
+        telemetry.setEffectiveBrake(value->value_float.value);
+    } else if (string(SCS_TELEMETRY_TRUCK_CHANNEL_parking_brake) == channel) {
+        telemetry.setParkingBrake(value->value_bool.value);
+    }
+
+    if (string(SCS_TELEMETRY_TRUCK_CHANNEL_wear_engine) == channel) {
+        telemetry.setWearEngine(value->value_float.value);
+    } else if (string(SCS_TELEMETRY_TRUCK_CHANNEL_wear_transmission) == channel) {
+        telemetry.setWearTransmission(value->value_float.value);
+    } else if (string(SCS_TELEMETRY_TRUCK_CHANNEL_wear_cabin) == channel) {
+        telemetry.setWearCabin(value->value_float.value);
+    } else if (string(SCS_TELEMETRY_TRUCK_CHANNEL_wear_chassis) == channel) {
+        telemetry.setWearChassis(value->value_float.value);
     }
 }
 
@@ -202,8 +221,9 @@ void Telemetry::Helper::set(FVector::Builder builder, const scs_value_t *const v
 }
 
 
-Telemetry::capnp_socket_t::capnp_socket_t(context_t& context, int type) :
-        socket_t(context, type)
+Telemetry::capnp_socket_t::capnp_socket_t(context_t& context, int type, const Telemetry& telemetry) :
+    socket_t(context, type),
+    telemetry(telemetry)
 {/*   ¯\(°_o)/¯   */}
 
 size_t Telemetry::capnp_socket_t::send(capnp::MessageBuilder &message) {
@@ -212,8 +232,8 @@ size_t Telemetry::capnp_socket_t::send(capnp::MessageBuilder &message) {
         auto bytes = words.asBytes();
         return socket_t::send(bytes.begin(), bytes.size(), 0);
     } catch (zmq::error_t &error) {
+        this->telemetry.log("[autodrome] : error during zmq recv(...)");
         return 0;
-        // this->log("[autodrome] : error during zmq recv(...)");
     }
 }
 
@@ -223,8 +243,8 @@ unique_ptr<message_t> Telemetry::capnp_socket_t::recv() {
         socket_t::recv(message.get());
         return message;
     } catch (zmq::error_t &error) {
+        this->telemetry.log("[autodrome] : error during zmq recv(...)");
         return unique_ptr<message_t>(new message_t());
-        // this->log("[autodrome] : error during zmq recv(...)");
     }
 }
 
@@ -234,7 +254,6 @@ void Telemetry::log(const string& message, const scs_log_type_t type) const {
     this->print(type, message.c_str());
 }
 
-#include <unistd.h>
 
 bool Telemetry::check_steamid() const {
     ifstream steam_appid_file("MacOS/steam_appid.txt");
@@ -291,7 +310,7 @@ bool Telemetry::register_event(const scs_telemetry_init_params_v100_t *const par
 }
 
 bool Telemetry::register_channel(const scs_telemetry_init_params_v100_t *const params, const scs_string_t channel, const scs_value_type_t type, const scs_context_t context) {
-    if (params->register_for_channel(channel, SCS_U32_NIL, type, SCS_TELEMETRY_CHANNEL_FLAG_none, Telemetry::channel_update, context) != SCS_RESULT_ok) {
+    if (params->register_for_channel(channel, SCS_U32_NIL, type, SCS_TELEMETRY_CHANNEL_FLAG_each_frame, Telemetry::channel_update, context) != SCS_RESULT_ok) {
         string message = "[autodrome] : unable to register for scs_telemetry_t=" + string(channel) + "' channel update";
         this->log(message, SCS_LOG_TYPE_error);
         return false;

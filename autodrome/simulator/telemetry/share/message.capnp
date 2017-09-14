@@ -11,11 +11,11 @@ struct Bind {
 
 # Response packet sent by the ETS2/ATS telemetry plugin
 struct Response {
-  event @0: Event;
-  data: union {
-    none @1: Void;
-    config @2: Config;
-    telemetry @3: Telemetry;
+  event @0 :Event;
+  data :union {
+    none @1 :Void;
+    config @2 :Config;
+    telemetry @3 :Telemetry;
   }
 
   # Lifecycle event
@@ -31,23 +31,34 @@ struct Response {
 
   # Truck configuration
   struct Config {
-    notImplemented @0: Void;
+    notImplemented @0 :Void;
   }
 
   # Telemetry data
   struct Telemetry {
-    worldPlacement @0 :SCS.DPlacement;
-    localLinearVelocity @1 :SCS.DVector;
-    localAngularVelocity @2 :SCS.DVector;
-    speed @3 :SCS.Float;
-    renderTime @4: SCS.Timestamp;
-    simulationTime @5: SCS.Timestamp;
-    pausedSimulationTime @6: SCS.Timestamp;
+    renderTime @0 :SCS.Timestamp;
+    simulationTime @1 :SCS.Timestamp;
+    pausedSimulationTime @2 :SCS.Timestamp;
+
+    worldPlacement @3 :SCS.DPlacement;
+    localLinearVelocity @4 :SCS.DVector;
+    localAngularVelocity @5 :SCS.DVector;
+    speed @6 :SCS.Float;
+
+    effectiveSteering @7 :SCS.Float;
+    effectiveThrottle @8 :SCS.Float;
+    effectiveBrake @9 :SCS.Float;
+    parkingBrake @10 :SCS.Bool;
+
+    wearEngine @11 :SCS.Float;
+    wearTransmission @12 :SCS.Float;
+    wearCabin @13 :SCS.Float;
+    wearChassis @14 :SCS.Float;
   }
 }
 
 
 # Request packet sent to the ETS2/ATS telemetry plugin
 struct Request {
-  okay @0: Void;
+  okay @0 :Void;
 }

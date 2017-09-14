@@ -1,5 +1,8 @@
 @0xec842aaa492eb782;
 
+# scs_bool_t
+using Bool = UInt8;
+
 # scs_float_t
 using Float = Float32;
 
