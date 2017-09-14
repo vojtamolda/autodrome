@@ -33,13 +33,13 @@ class ETS2(Simulator):
 
 class TestETS2(unittest.TestCase):
     RepeatFPS = 100
-    MinimumFPS = 25
+    MinimumFPS = 20
 
     @unittest.skipUnless(ETS2.RootGameFolder.exists(), "ETS2 not installed")
     def test_capture(self):
         with ETS2() as ets2:
-            ets2.command('preview europe', wait=10)
-            seconds = timeit.timeit(lambda: ets2.window.capture(), number=self.RepeatFPS)
+            ets2.command('preview indy500', wait=True)
+            seconds = timeit.timeit(lambda: ets2.frame(ets2.telemetry.data()), number=self.RepeatFPS)
         self.assertGreater(self.RepeatFPS / seconds, self.MinimumFPS)
 
 

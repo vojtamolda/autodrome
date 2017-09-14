@@ -33,13 +33,13 @@ class ATS(Simulator):
 
 class TestATS(unittest.TestCase):
     RepeatFPS = 100
-    MinimumFPS = 25
+    MinimumFPS = 20
 
     @unittest.skipUnless(ATS.RootGameFolder.exists(), "ATS not installed")
     def test_capture(self):
         with ATS() as ats:
-            ats.command('preview usa', wait=10)
-            seconds = timeit.timeit(lambda: ats.window.capture(), number=self.RepeatFPS)
+            ats.command('preview indy500', wait=True)
+            seconds = timeit.timeit(lambda: ats.frame(ats.telemetry.data()), number=self.RepeatFPS)
         self.assertGreater(self.RepeatFPS / seconds, self.MinimumFPS)
 
 

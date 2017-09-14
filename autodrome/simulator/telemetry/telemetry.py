@@ -5,6 +5,7 @@ import capnp
 class Telemetry:
     Message = capnp.load('autodrome/simulator/telemetry/share/message.capnp')
     Event = Message.Response.Event
+    Data = Message.Response.Telemetry
 
     def __init__(self, address: str=Message.Bind.address):
         self.address = address
@@ -26,7 +27,6 @@ class Telemetry:
             reply = self.receive()
         return reply
 
-    def telemetry(self) -> Message.Response.Telemetry:
+    def data(self) -> Data:
         reply = self.wait(event=Telemetry.Event.frameEnd)
-        return reply.data
-
+        return reply.data.telemetry

@@ -20,7 +20,7 @@ class Simulator(abc.ABC):
     MapsFolder = Path()
     SettingsFolder = Path()
     Config = {'g_developer': '1', 'g_console': '1',
-              'r_fullscreen': '0', 'r_mode_width': '2048', 'r_mode_height': '1024'}
+              'r_fullscreen': '0', 'r_mode_width': '1024', 'r_mode_height': '600'}
 
     def __init__(self):
         self.steam1_file = Path.cwd() / 'steam_appid.txt'
@@ -41,7 +41,6 @@ class Simulator(abc.ABC):
         self.setup_steam(self.steam1_file)
         self.setup_steam(self.steam2_file)
 
-        print("Starting game process '{}'...".format(self.GameExecutable))
         game_command = [str(self.GameExecutable), '-nointro', '-force_mods', '-noworkshop', '-window_pos', '0', '0']
         self.process = subprocess.Popen(game_command)
         self.window = Window(pid=self.process.pid, timeout=5)
@@ -51,6 +50,8 @@ class Simulator(abc.ABC):
         self.enter()  # Get rid of pesky Telemetry SDK warning
         self.telemetry = Telemetry()
         self.telemetry.wait(Telemetry.Event.load)
+        for _ in range(6):
+            self.telemetry.wait(Telemetry.Event.config)
 
     def __enter__(self):
         self.start()
@@ -81,6 +82,7 @@ class Simulator(abc.ABC):
 
         for line in old_lines:
             words = line.split()
+
             if len(words) > 1 and words[1] in override:
                 key, value = words[1], override[words[1]]
                 new_lines.append('uset {key} "{value}"'.format(key=key, value=value))
@@ -121,8 +123,16 @@ class Simulator(abc.ABC):
         if acceleration < 0:
             self.keyboard.press('↓')
 
-    def command(self, command: str, wait: float=0):
-        """ Type command into the game developer console
+    def frame(self, old_data: Telemetry.Data) -> tuple:
+        """ Wait for next frame to be rendered and return it with telemetry data """
+        new_data = self.wait()
+        while new_data.renderTime < old_data.renderTime:
+            new_data = self.wait()
+        pixels = self.window.capture()
+        return pixels, new_data
+
+    def command(self, command: str, wait: bool=False) -> Telemetry.Data:
+        """ Type command into the game developer console and optionally wait for data
         List of Commands: http://modding.scssoft.com/wiki/Documentation/Engine/Console/Commands """
         self.window.activate()
         if self.process and self.keyboard:
@@ -130,7 +140,12 @@ class Simulator(abc.ABC):
             time.sleep(0.1)
             self.keyboard.type(command)
             self.enter()
-            time.sleep(wait)
+        return self.wait() if wait else None
+
+    def wait(self) -> Telemetry.Data:
+        """ Wait until game is ready and starts sending telemetry data """
+        data = self.telemetry.data()
+        return data
 
     def enter(self):
         """ Press enter key ¯\_(ツ)_/¯ """
@@ -145,6 +160,7 @@ class Simulator(abc.ABC):
             self.steam2_file.unlink()
         except FileNotFoundError:
             pass
+        self.telemetry = None
         self.keyboard = None
         self.window = None
         self.process.terminate()
