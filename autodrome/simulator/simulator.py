@@ -7,7 +7,7 @@ import distutils.dir_util as dstdir
 
 from .window import Window
 from .controller import Keyboard
-from autodrome.simulator.telemetry import Telemetry
+from .telemetry import Telemetry
 
 
 class Simulator(abc.ABC):

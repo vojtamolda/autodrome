@@ -46,13 +46,11 @@ set(INCLUDE_DIRS
         ${INCLUDE_DIRS} ${CPPZMQ_INCLUDE_DIRS})
 
 find_package(CAPNP REQUIRED)
-file(INSTALL "../../common"
-        DESTINATION "${CMAKE_SOURCE_DIR}")
 set(CAPNPC_OUTPUT_DIR
         "${CMAKE_SOURCE_DIR}")
 capnp_generate_cpp(CAPNP_SOURCES CAPNP_HEADERS
-        "common/telemetry.capnp"
-        "common/scs.capnp")
+        "share/message.capnp"
+        "share/scs.capnp")
 add_definitions(${CAPNP_DEFINITIONS})
 set(INCLUDE_DIRS
         ${INCLUDE_DIRS} ${CAPNP_INCLUDE_DIRS})

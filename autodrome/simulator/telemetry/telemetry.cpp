@@ -62,6 +62,7 @@ void Telemetry::start() {
     auto response = this->message_builder.getRoot<Response>();
     response.setEvent(Response::Event::START);
     response.getData().setNone();
+    this->data_socket.send(this->message_builder);
 }
 
 void Telemetry::frame_start(const struct scs_telemetry_frame_start_t *const frame_start_info) {

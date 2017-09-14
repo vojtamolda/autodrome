@@ -4,7 +4,7 @@
 #include <zmq.hpp>
 #include <capnp/message.h>
 #include <capnp/serialize.h>
-#include "common/telemetry.capnp.h"
+#include "share/message.capnp.h"
 
 #include <scssdk_telemetry.h>
 #include <amtrucks/scssdk_ats.h>
