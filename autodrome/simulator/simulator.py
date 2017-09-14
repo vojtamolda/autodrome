@@ -44,13 +44,12 @@ class Simulator(abc.ABC):
         print("Starting game process '{}'...".format(self.GameExecutable))
         game_command = [str(self.GameExecutable), '-nointro', '-force_mods', '-noworkshop', '-window_pos', '0', '0']
         self.process = subprocess.Popen(game_command)
-        time.sleep(3)  # FIXME Add waiting loop into the window constructor
-        self.window = Window(pid=self.process.pid)
-        self.keyboard = Keyboard()
-        self.telemetry = Telemetry()
-
+        self.window = Window(pid=self.process.pid, timeout=5)
         self.window.activate()
+        self.keyboard = Keyboard()
+        time.sleep(2)
         self.enter()  # Get rid of pesky Telemetry SDK warning
+        self.telemetry = Telemetry()
         self.telemetry.wait(Telemetry.Event.load)
 
     def __enter__(self):

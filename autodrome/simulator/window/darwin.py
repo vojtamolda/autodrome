@@ -16,31 +16,34 @@ class WindowDarwin(Window):
     """ Abstract window class for capture of game window content on macOS """
     TitleBarHeight = 22
 
-    def __init__(self, pid: int):
+    def __init__(self, pid: int, timeout: float):
         """ Create a new instance from main application window of a process """
-        super().__init__(pid=pid)
-
-        options = CG.kCGWindowListOptionAll
-        relativeToWindow = CG.kCGNullWindowID
-        windows = CG.CGWindowListCopyWindowInfo(options, relativeToWindow)
-        if windows is None:
-            raise WindowDarwinError("Can't access macOS system window list")
-
-        windows = [window for window in windows if window['kCGWindowOwnerPID'] == pid]
-        if len(windows) == 0:
-            raise WindowDarwinError("Main process window not found")
-
-        if windows[0]['kCGWindowBounds'] == {'X': 0, 'Y': 0, 'Width': 0, 'Height': 0}:
-            warnings.warn("No valid windows found", RuntimeWarning)
+        super().__init__(pid, timeout)
+        deadline = time.time() + timeout
+        while True:
+            if time.time() > deadline:
+                raise WindowDarwinError("Main process window not found")
+            options = CG.kCGWindowListOptionAll
+            relativeToWindow = CG.kCGNullWindowID
+            windows = CG.CGWindowListCopyWindowInfo(options, relativeToWindow)
+            if windows is None:
+                time.sleep(0.1)
+                continue
+            windows = [window for window in windows if window['kCGWindowOwnerPID'] == pid]
+            if len(windows) == 0:
+                time.sleep(0.1)
+                continue
+            if windows[0]['kCGWindowBounds'] == {'X': 0, 'Y': 0, 'Width': 0, 'Height': 0}:
+                time.sleep(0.1)
+                continue
+            break
         self.window = windows[0]
 
     def activate(self):
         """ Bring window to foreground """
-
         runningApplication = CA.NSRunningApplication.runningApplicationWithProcessIdentifier_(self.pid)
         activationOptions = CA.NSApplicationActivateAllWindows | CA.NSApplicationActivateIgnoringOtherApps
         runningApplication.activateWithOptions_(activationOptions)
-        time.sleep(0.25)
 
     def capture(self) -> np.array:
         """ Capture border-less window content and return it as a raw pixel array """
