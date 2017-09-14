@@ -12,19 +12,19 @@ class ATS(Simulator):
         RootGameFolder = Path('~/Library/Application Support/Steam/steamapps/common/American Truck Simulator').expanduser()
         UserGameFolder = Path('~/Library/Application Support/American Truck Simulator').expanduser()
         GameExecutable = RootGameFolder / 'American Truck Simulator.app/Contents/MacOS/amtrucks'
-        TelemetryPlugin = Path('./simulator/telemetry/plugin/libautodrome.so')
+        TelemetryPlugin = Path('./autodrome/simulator/telemetry/plugin/libautodrome.so')
     if platform.system() == 'Linux':
         RootGameFolder = Path('~/.steam/steam/steamapps/common/American Truck Simulator').expanduser()
         UserGameFolder = Path('~/local/share/American Truck Simulator').expanduser()
         GameExecutable = RootGameFolder / 'bin/amtrucks'
-        TelemetryPlugin = Path('./simulator/telemetry/plugin/todo.so')
+        TelemetryPlugin = Path('./autodrome/simulator/telemetry/plugin/todo.so')
     if platform.system() == 'Windows':
         RootGameFolder = Path('C:/Program Files (x86)/Steam/steamapps/common/American Truck Simulator')
         UserGameFolder = Path('~/Documents/American Truck Simulator').expanduser()
         GameExecutable = RootGameFolder / 'bin/amtrucks.exe'
-        TelemetryPlugin = Path('./simulator/telemetry/plugin/todo.dll')
+        TelemetryPlugin = Path('./autodrome/simulator/telemetry/plugin/todo.dll')
     SteamAppID = 270880
-    MapsFolder = Path('./maps/ats/')
+    MapsFolder = Path('./autodrome/maps/ats/')
     SettingsFolder = Path('~/.autodrome/ats/').expanduser()
 
 
