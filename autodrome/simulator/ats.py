@@ -38,7 +38,7 @@ class TestATS(unittest.TestCase):
     @unittest.skipUnless(ATS.RootGameFolder.exists(), "ATS not installed")
     def test_capture(self):
         with ATS() as ats:
-            ats.command('preview indy500', wait=True)
+            ats.command('preview indy500')
             seconds = timeit.timeit(lambda: ats.frame(ats.telemetry.data()), number=self.RepeatFPS)
         self.assertGreater(self.RepeatFPS / seconds, self.MinimumFPS)
 

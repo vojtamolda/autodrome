@@ -9,7 +9,7 @@ from .window import Window
 from .controller import Keyboard
 from .telemetry import Telemetry
 
-
+ 
 class Simulator(abc.ABC):
     """ Abstract interface for launching and controlling ETS2/ATS simulation games """
     RootGameFolder = Path()
@@ -45,12 +45,12 @@ class Simulator(abc.ABC):
         self.process = subprocess.Popen(game_command)
         self.window = Window(pid=self.process.pid, timeout=5)
         self.window.activate()
+        time.sleep(2)  # ETS2/ATS is sometimes slow to activate
         self.keyboard = Keyboard()
-        time.sleep(2)
-        self.enter()  # Get rid of pesky Telemetry SDK warning
+        self.keyboard.enter()  # Get rid of pesky Telemetry SDK warning
         self.telemetry = Telemetry()
         self.telemetry.wait(Telemetry.Event.load)
-        for _ in range(6):
+        for truck_config_event in range(6):
             self.telemetry.wait(Telemetry.Event.config)
 
     def __enter__(self):
@@ -59,23 +59,23 @@ class Simulator(abc.ABC):
 
     @classmethod
     def setup_maps(cls, mod_dir: Path, local_dir: Path):
-        """ Copy local mod with custom map into the ATS/ETS2 mod folder """
-        print("Setting up mod with map in '{}'...".format(mod_dir))
+        """ Copy local mod with custom map into the ETS2/ATS mod folder """
+        print(f"Setting up mod with map in '{mod_dir}'...")
         mod_dir.mkdir(parents=True, exist_ok=True)
         dstdir.copy_tree(str(local_dir), str(mod_dir))
 
     @classmethod
     def setup_plugin(cls, telemetry_lib: Path):
-        """ Copy Telemetry SDK library into ATS/ETS2 telemetry folder """
+        """ Copy Telemetry SDK library into ETS2/ATS telemetry folder """
         destination_dir = cls.GameExecutable.parent / 'plugins'
-        print("Setting up telemetry plugin in '{}'...".format(destination_dir))
+        print(f"Setting up telemetry plugin in '{destination_dir}'...")
         destination_dir.mkdir(exist_ok=True)
         shutil.copy(telemetry_lib, destination_dir)
 
     @classmethod
     def setup_config(cls, config_file: Path, override: dict) -> None:
-        """ Override existing ATS/ETS2 config file with the provided keys and values """
-        print("Setting up game configuration in '{}'".format(config_file))
+        """ Override existing ETS2/ATS config file with the provided keys and values """
+        print(f"Setting up game configuration in '{config_file}'")
         old_lines = config_file.read_text().splitlines()
         override = override.copy()
         new_lines = []
@@ -85,12 +85,12 @@ class Simulator(abc.ABC):
 
             if len(words) > 1 and words[1] in override:
                 key, value = words[1], override[words[1]]
-                new_lines.append('uset {key} "{value}"'.format(key=key, value=value))
+                new_lines.append(f'uset {key} "{value}"')
                 del override[key]
             else:
                 new_lines.append(line)
         for key, value in override.items():
-            new_lines.append('uset {key} "{value}"'.format(key=key, value=value))
+            new_lines.append(f'uset {key} "{value}"')
 
         config_file.write_text('\n'.join(new_lines))
 
@@ -102,7 +102,7 @@ class Simulator(abc.ABC):
         the Steam client application over which we would have no control.
 
         Details: https://partner.steamgames.com/doc/api/steam_api#SteamAPI_RestartAppIfNecessary """
-        print("Setting up Steam ID in '{}'".format(steam_file))
+        print(f"Setting up Steam ID in '{steam_file}'")
         steam_file.write_text(str(cls.SteamAppID))
 
     def control(self, steer: int, acceleration: int):
@@ -125,33 +125,28 @@ class Simulator(abc.ABC):
 
     def frame(self, old_data: Telemetry.Data) -> tuple:
         """ Wait for next frame to be rendered and return it with telemetry data """
-        new_data = self.wait()
+        new_data = self.telemetry.data()
         while new_data.renderTime < old_data.renderTime:
-            new_data = self.wait()
+            new_data = self.telemetry.data()
         pixels = self.window.capture()
         return pixels, new_data
 
-    def command(self, command: str, wait: bool=False) -> Telemetry.Data:
-        """ Type command into the game developer console and optionally wait for data
+    def command(self, command: str) -> Telemetry.Data:
+        """ Type command into the game developer console
         List of Commands: http://modding.scssoft.com/wiki/Documentation/Engine/Console/Commands """
+        self.keyboard.afk()
         self.window.activate()
-        if self.process and self.keyboard:
-            self.keyboard.type('~')
-            time.sleep(0.1)
-            self.keyboard.type(command)
-            self.enter()
-        return self.wait() if wait else None
+        self.keyboard.type('`')
+        time.sleep(0.15)
+        self.keyboard.type(command)
+        self.keyboard.enter()
 
     def wait(self) -> Telemetry.Data:
         """ Wait until game is ready and starts sending telemetry data """
-        data = self.telemetry.data()
-        return data
-
-    def enter(self):
-        """ Press enter key ¯\_(ツ)_/¯ """
-        self.keyboard.press('\n')
-        time.sleep(0.1)
-        self.keyboard.release('\n')
+        self.telemetry.wait(Telemetry.Event.start)
+        for strange_map_loading_frames in range(4):
+            self.telemetry.data()
+        return self.telemetry.data()
 
     def terminate(self):
         """ Stop the simulator process and clean up """
@@ -164,7 +159,7 @@ class Simulator(abc.ABC):
         self.keyboard = None
         self.window = None
         self.process.terminate()
-        self.process.wait(timeout=0.1)
+        self.process.wait()
         self.process = None
 
     def __exit__(self, exc_type, exc_val, exc_tb):

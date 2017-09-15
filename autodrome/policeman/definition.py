@@ -136,10 +136,9 @@ class DefinitionFile(dict):
                 tokens = self.Grammar.tokenize(content)
                 self.parse(tokens)
             except ParseException as exc:
-                msg = ("{exc.msg}\n"
-                       "File \"{path}\"\n"
-                       "Entry \"{exc.line}\")")
-                exc.msg = msg.format(exc=exc, path=path)
+                exc.msg = (f"{exc.msg}\n"
+                           f"File \"{path}\"\n"
+                           f"Entry \"{exc.line}\")")
                 raise exc
 
     def __getattr__(self, item: object) -> object:
@@ -167,10 +166,9 @@ class DefinitionFile(dict):
                     structure[identifier].append(value)
                 else:
                     if identifier in structure:
-                        message = ("Duplicate value found during parsing:\n"
-                                   "File \"{path}\"\n"
-                                   "Value \"{group}:{name}::{ident}\"")
-                        message = message.format(group=group, name=name, ident=identifier, path=self.path)
+                        message = (f"Duplicate value found during parsing:\n"
+                                   f"File \"{self.path}\"\n"
+                                   f"Value \"{group}:{name}::{identifier}\"")
                         warnings.warn(message, SyntaxWarning)
                     structure[identifier] = constructor(value)
             return structure
@@ -247,10 +245,11 @@ class Definition(dict):
                             resolved = resolved[piece]
                         container[key] = resolved
                     except KeyError:
-                        message = ("Unresolved reference\n"
-                                   "Key \"{name}::{ident}\"\n"
-                                   "Reference \"{reference}\"")
-                        message = message.format(name=".".join(recurse), ident=key, reference=item)
+                        name, identifier = ".".join(recurse), key
+                        identifier = key
+                        message = (f"Unresolved reference\n"
+                                   f"Key \"{name}::{identifier}\"\n"
+                                   f"Reference \"{item}\"")
                         warnings.warn(message, RuntimeWarning)
                 elif type(item) in iterators:
                     recurse.append(key)

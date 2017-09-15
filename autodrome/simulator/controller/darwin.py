@@ -101,6 +101,7 @@ class KeyboardDarwin(Keyboard):
         '(': 0x21,  # kVK_ANSI_LeftBracket
         'i': 0x22,  # kVK_ANSI_I
         'p': 0x23,  # kVK_ANSI_P
+        'esc': 0x35,  # kVK_Escape
         '\n': 0x24,  # kVK_Return
         'l': 0x25,  # kVK_ANSI_L
         'j': 0x26,  # kVK_ANSI_J
@@ -138,13 +139,25 @@ class KeyboardDarwin(Keyboard):
         '↑': 0x7E,  # kVK_UpArrow
     }
 
+    def __init__(self):
+        super().__init__()
+        self.pressed = set()
+
     def press(self, key: str):
         """ Press a virtual keyboard key """
         self.event(key, down=True)
+        self.pressed.add(key)
 
     def release(self, key: str):
         """ Release all pressed keys """
         self.event(key, down=False)
+        self.pressed.discard(key)
+
+    def afk(self):
+        """ Release all pressed keys """
+        for key in self.pressed:
+            self.event(key, down=False)
+        self.pressed = set()
 
     def event(self, key: str, down: bool):
         """ Create a Core Graphics keyboard event and post it for macOS to process """
@@ -153,9 +166,8 @@ class KeyboardDarwin(Keyboard):
             if key.isupper():
                 CG.CGEventSetFlags(event, CG.kCGEventFlagMaskShift | CG.CGEventGetFlags(event))
             CG.CGEventPost(CG.kCGHIDEventTap, event)
-            time.sleep(0.0001)
         except KeyError:
-            raise NotImplementedError("Key '{}' is not implemented".format(key))
+            raise NotImplementedError(f"Key '{key}' is not implemented")
 
 
 # region Unit Tests

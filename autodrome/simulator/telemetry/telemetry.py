@@ -19,6 +19,7 @@ class Telemetry:
         self.socket.send(request_message)
         reply_message = self.socket.recv()
         reply = Telemetry.Message.Response.from_bytes(reply_message)
+        print(reply)
         return reply
 
     def wait(self, event: Event) -> Message.Response:

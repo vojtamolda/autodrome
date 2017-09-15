@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-from simulator import Simulator
+from ..simulator import Simulator
 
 from .map import Map
 from .definition import Definition
@@ -20,7 +20,7 @@ class Policeman:
         self.world = Definition(simulator.SettingsFolder / 'cache' / 'def.scs' / 'world', recursive=True)
 
     def setup_cache(self, overwrite: bool=False) -> None:
-        """ Extract ATS/ETS2 archives to an intermediate cache for parsing """
+        """ Extract ETS2/ATS archives to an intermediate cache for parsing """
         extractor = self.simulator.RootGameFolder / 'scs_extractor.exe'
         shutil.copy(self.ExtractorExecutable, extractor)
 

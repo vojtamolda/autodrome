@@ -118,10 +118,9 @@ class MapFile(dict):
                 tokens = self.Grammar.tokenize(content)
                 self.parse(tokens)
             except ParseException as exc:
-                msg = ("{exc.msg}\n"
-                       "File: \"{path.name}\"\n"
-                       "Entry: \"{exc.line}\")")
-                exc.msg = msg.format(exc=exc, path=path)
+                exc.msg = (f"{exc.msg}\n"
+                           f"File: \"{path.name}\"\n"
+                           f"Entry: \"{exc.line}\")")
                 raise exc
 
     def __getattr__(self, item) -> object:
@@ -194,10 +193,9 @@ class Map(dict):
                 continue
             if identifier in self:
                 if self[identifier] != another[identifier]:
-                    message = ("Duplicate found during merging:\n"
-                               "File \"{path}\"\n"
-                               "Identifier \"{ident}\"")
-                    message = message.format(ident=identifier, path=another.path)
+                    message = (f"Duplicate found during merging:\n"
+                               f"File \"{another.path}\"\n"
+                               f"Identifier \"{identifier}\"")
                     warnings.warn(message, RuntimeWarning)
             self[identifier] = value
 

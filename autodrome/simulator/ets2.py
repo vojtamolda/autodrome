@@ -38,7 +38,7 @@ class TestETS2(unittest.TestCase):
     @unittest.skipUnless(ETS2.RootGameFolder.exists(), "ETS2 not installed")
     def test_capture(self):
         with ETS2() as ets2:
-            ets2.command('preview indy500', wait=True)
+            ets2.command('preview indy500')
             seconds = timeit.timeit(lambda: ets2.frame(ets2.telemetry.data()), number=self.RepeatFPS)
         self.assertGreater(self.RepeatFPS / seconds, self.MinimumFPS)
 
