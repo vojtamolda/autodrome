@@ -1,6 +1,7 @@
 import abc
 import time
 
+
 class SteeringWheel(abc.ABC):
     """ Abstract controller class for interfacing with virtual steering wheels """
     class Axis:
@@ -61,8 +62,8 @@ class Keyboard(abc.ABC):
         """ Release all pressed keys """
         raise NotImplementedError
 
-    def enter(self):
+    def enter(self, hold=0.1):
         """ Reliably press enter key ¯\_(ツ)_/¯ """
         self.press('\n')
-        time.sleep(0.1)
+        time.sleep(hold)
         self.release('\n')

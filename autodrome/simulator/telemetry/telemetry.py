@@ -1,31 +1,44 @@
 import zmq
+import math
+import time
 import capnp
 
 
 class Telemetry:
     Message = capnp.load('autodrome/simulator/telemetry/share/message.capnp')
-    Event = Message.Response.Event
-    Data = Message.Response.Telemetry
+    Request = Message.Request
+    Response = Message.Response
+    Event = Response.Event
+    Data = Response.Telemetry
 
     def __init__(self, address: str=Message.Bind.address):
         self.address = address
         ctx = zmq.Context()
         self.socket = ctx.socket(zmq.REQ)
         self.socket.connect(Telemetry.Message.Bind.address)
+        self.poller = zmq.Poller()
+        self.poller.register(self.socket, flags=zmq.POLLIN)
 
-    def receive(self) -> Message.Response:
-        request = self.Message.Request.new_message()
-        request_message = request.to_bytes()
-        self.socket.send(request_message)
-        reply_message = self.socket.recv()
-        reply = Telemetry.Message.Response.from_bytes(reply_message)
-        print(reply)
+        request = self.Request.new_message()
+        request_bytes = request.to_bytes()
+        self.socket.send(request_bytes)
+
+    def recv(self) -> Response:
+        reply_bytes = self.socket.recv()
+        reply = self.Response.from_bytes(reply_bytes)
+
+        request = self.Request.new_message()
+        request_bytes = request.to_bytes()
+        self.socket.send(request_bytes)
         return reply
 
-    def wait(self, event: Event) -> Message.Response:
-        reply = self.receive()
-        while reply.event != event:
-            reply = self.receive()
+    def wait(self, event: Event, timeout: float=math.inf) -> Response:
+        reply, deadline = None, time.time() + timeout
+        while time.time() < deadline:
+            if self.poller.poll(timeout=5):
+                reply = self.recv()
+            if reply and reply.event == event:
+                break
         return reply
 
     def data(self) -> Data:

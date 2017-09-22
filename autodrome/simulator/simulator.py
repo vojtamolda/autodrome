@@ -49,8 +49,7 @@ class Simulator(abc.ABC):
         self.keyboard = Keyboard()
         self.keyboard.enter()  # Get rid of pesky Telemetry SDK warning
         self.telemetry = Telemetry()
-        self.telemetry.wait(Telemetry.Event.load)
-        for truck_config_event in range(6):
+        for truck_config_event in range(5):
             self.telemetry.wait(Telemetry.Event.config)
 
     def __enter__(self):
@@ -73,7 +72,7 @@ class Simulator(abc.ABC):
         shutil.copy(telemetry_lib, destination_dir)
 
     @classmethod
-    def setup_config(cls, config_file: Path, override: dict) -> None:
+    def setup_config(cls, config_file: Path, override: dict):
         """ Override existing ETS2/ATS config file with the provided keys and values """
         print(f"Setting up game configuration in '{config_file}'")
         old_lines = config_file.read_text().splitlines()
@@ -137,9 +136,9 @@ class Simulator(abc.ABC):
         self.keyboard.afk()
         self.window.activate()
         self.keyboard.type('`')
-        time.sleep(0.15)
+        self.telemetry.wait(Telemetry.Event.pause, timeout=0.05)
         self.keyboard.type(command)
-        self.keyboard.enter()
+        self.keyboard.enter(hold=1)
 
     def wait(self) -> Telemetry.Data:
         """ Wait until game is ready and starts sending telemetry data """

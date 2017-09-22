@@ -16,4 +16,4 @@ if __name__ == "__main__":
         if args.map is not None:
             simulator.command('preview {}'.format(args.map))
         while simulator.process.poll() is None:
-            reply = simulator.telemetry.receive()
+            reply = simulator.telemetry.recv()
