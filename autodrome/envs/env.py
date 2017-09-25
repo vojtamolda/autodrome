@@ -14,21 +14,26 @@ class SimulatorEnv(gym.Env):
         width, height = int(Simulator.Config['r_mode_width']), int(Simulator.Config['r_mode_height'])
         self.observation_space = gym.spaces.Box(0, 255, shape=[width, height, 3], dtype=np.uint8)  # Raw Screen Pixels
         self.simulator = None
-        self.telemetry = None
         self.figure = None
         self.image = None
+        self.data = None
         self.map = map
 
     def step(self, action: np.ndarray) -> tuple:
         self.simulator.control(steer=action[0] - 1,  acceleration=action[1] - 1)
-        pixels, self.telemetry = self.simulator.frame(self.telemetry)
-        return self.image, +1, False, {}
+        pixels, self.data = self.simulator.frame(self.data)
+        if (self.data.wearEngine > 0 or self.data.wearTransmission > 0
+            or self.data.wearCabin > 0 or self.data.wearChassis > 0):
+            reward, done = -1, True
+        else:
+            reward, done = +1, False
+        return self.image, reward, done, {}
 
     def reset(self) -> np.array:
         self.simulator.command(f'preview {self.map}')
-        self.telemetry = self.simulator.wait()
-        pixels, self.telemetry = self.simulator.frame(self.telemetry)
-        if self.telemetry.parkingBrake:
+        self.data = self.simulator.wait()
+        pixels, self.data = self.simulator.frame(self.data)
+        if self.data.parkingBrake:
             self.simulator.keyboard.type(' ')  # Release parking brake
         self.simulator.keyboard.type('4')  # Switch to bumper camera
         self.image = self.simulator.window.capture()
@@ -45,3 +50,4 @@ class SimulatorEnv(gym.Env):
         if self.figure:
             self.figure.close()
         self.simulator.terminate()
+

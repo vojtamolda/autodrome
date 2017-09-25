@@ -1,5 +1,6 @@
 import gym
 import unittest
+import numpy as np
 
 from ..simulator import ETS2
 from .env import SimulatorEnv
@@ -18,6 +19,7 @@ class ETS2Env(SimulatorEnv):
 
 class TestETS2Env(unittest.TestCase):
 
+    @unittest.skipUnless(ETS2.RootGameFolder.exists(), "ETS2 not installed")
     def test_gym(self):
         env = gym.make('ETS2-Indy500-v0')
         image = env.reset()
@@ -25,5 +27,15 @@ class TestETS2Env(unittest.TestCase):
             image, reward, done, info = env.step([1, 1])
         env.close()
 
+    @unittest.skipUnless(ETS2.RootGameFolder.exists(), "ETS2 not installed")
+    def test_reliability(self):
+        env = gym.make('ETS2-Indy500-v0')
+        for episode in range(10):
+            done, pixels = False, env.reset()
+            while not done:
+                action = np.array([1, 2])  # Straight and Full Throttle :)
+                pixels, reward, done, info = env.step(action)
+        env.close()
 
-# end region
+
+# endregion

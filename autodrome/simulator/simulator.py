@@ -9,7 +9,7 @@ from .window import Window
 from .controller import Keyboard
 from .telemetry import Telemetry
 
- 
+
 class Simulator(abc.ABC):
     """ Abstract interface for launching and controlling ETS2/ATS simulation games """
     RootGameFolder = Path()
@@ -136,9 +136,11 @@ class Simulator(abc.ABC):
         self.keyboard.afk()
         self.window.activate()
         self.keyboard.type('`')
-        self.telemetry.wait(Telemetry.Event.pause, timeout=0.05)
+        self.telemetry.wait(None, timeout=0.25)
         self.keyboard.type(command)
-        self.keyboard.enter(hold=1)
+        self.keyboard.press('\n')
+        self.telemetry.wait(None, timeout=0.35)
+        self.keyboard.release('\n')
 
     def wait(self) -> Telemetry.Data:
         """ Wait until game is ready and starts sending telemetry data """
