@@ -193,7 +193,7 @@ class Definition(dict):
     def __init__(self, directory: Path, recursive=False):
         """ Read a SCS definition files (*.sii) from a directory and merge them into a single in-memory graph """
         super().__init__()
-        siiFiles = directory.glob('**/*.sii' if recursive is True else '*.sii')
+        siiFiles = directory.glob('**/road_*.sii' if recursive is True else 'road_*.sii')
         siiFiles = sorted(siiFiles, key=lambda file: file.stat().st_size, reverse=True)
 
         with Pool() as pool:
@@ -368,15 +368,6 @@ class TestDefinitionFile(unittest.TestCase):
         original.parse(DefinitionFile.Grammar.tokenize(self.entries))
         unpickled = pickle.loads(pickle.dumps(original))
         self.assertDictEqual(original, unpickled)
-
-
-class TestDefinition(unittest.TestCase):
-
-    @unittest.skip("Definitions (def.scs) file has to be extracted manually to this location")
-    def testLoad(self):
-        dir = Path('/Users/Vojta/Source/scs_extracted/def/world/')
-        defs = Definition(dir, recursive=True)
-        pass
 
 
 # endregion

@@ -18,7 +18,6 @@ class Simulator(abc.ABC):
     TelemetryPlugin = Path()
     SteamAppID = None
     MapsFolder = Path()
-    SettingsFolder = Path()
     Config = {'g_developer': '1', 'g_console': '1',
               'r_fullscreen': '0', 'r_mode_width': '1024', 'r_mode_height': '600'}
 

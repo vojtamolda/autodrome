@@ -2,10 +2,11 @@ import zmq
 import math
 import time
 import capnp
+from pathlib import Path
 
 
 class Telemetry:
-    Message = capnp.load('autodrome/simulator/telemetry/share/message.capnp')
+    Message = capnp.load(str(Path(__file__).parent / 'share' / 'message.capnp'))
     Request = Message.Request
     Response = Message.Response
     Event = Response.Event

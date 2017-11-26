@@ -12,20 +12,19 @@ class ETS2(Simulator):
         RootGameFolder = Path('~/Library/Application Support/Steam/steamapps/common/Euro Truck Simulator 2').expanduser()
         UserGameFolder = Path('~/Library/Application Support/Euro Truck Simulator 2').expanduser()
         GameExecutable = RootGameFolder / 'Euro Truck Simulator 2.app/Contents/MacOS/eurotrucks2'
-        TelemetryPlugin = Path('./autodrome/simulator/telemetry/plugin/libautodrome.so')
+        TelemetryPlugin = Path(__file__).parent / 'telemetry/plugin/libautodrome.so'
     if platform.system() == 'Linux':
         RootGameFolder = Path('~/.steam/steam/steamapps/common/Euro Truck Simulator 2').expanduser()
         UserGameFolder = Path('~/local/share/Euro Truck Simulator 2').expanduser()
         GameExecutable = RootGameFolder / 'bin/eurotrucks2'
-        TelemetryPlugin = Path('./autodrome/simulator/telemetry/plugin/todo.so')
+        TelemetryPlugin = Path(__file__).parent / 'telemetry/plugin/todo.so'
     if platform.system() == 'Windows':
         RootGameFolder = Path('C:/Program Files (x86)/Steam/steamapps/common/Euro Truck Simulator 2')
         UserGameFolder = Path('~/Documents/Euro Truck Simulator 2').expanduser()
         GameExecutable = RootGameFolder / 'bin/eurotrucks2.exe'
-        TelemetryPlugin = Path('./autodrome/simulator/telemetry/plugin/todo.dll')
+        TelemetryPlugin = Path(__file__).parent / 'telemetry/plugin/todo.dll'
     SteamAppID = 227300
-    MapsFolder = Path('./autodrome/maps/ets2/')
-    SettingsFolder = Path('~/.autodrome/ets2/').expanduser()
+    MapsFolder = Path(__file__).parent / '../maps/ets2/'
 
 
 # region Unit Tests
