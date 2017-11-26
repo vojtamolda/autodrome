@@ -9,9 +9,8 @@ from .env import SimulatorEnv
 class ETS2Env(SimulatorEnv):
 
     def __init__(self, *args, **kwargs):
+        kwargs['simulator'] = ETS2()
         super().__init__(*args, **kwargs)
-        self.simulator = ETS2()
-        self.simulator.start()
 
 
 # region Unit Tests

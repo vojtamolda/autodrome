@@ -4,7 +4,6 @@ import unittest
 import platform
 import subprocess
 from pathlib import Path
-import matplotlib.pyplot as plt
 
 from autodrome.simulator import Simulator, ETS2, ATS
 
@@ -19,6 +18,7 @@ class Policeman:
         self.simulator = simulator
         self.world = self.setup_world(overwrite=False)
         self.map = self.setup_map()
+        self.plot = None
 
     def setup_world(self, overwrite: bool=False) -> Definition:
         """ Extract ETS2/ATS archives to an intermediate cache for parsing """
@@ -55,18 +55,6 @@ class Policeman:
         map = Map(self.simulator.mod_dir / 'map/indy500.txt')
         return map
 
-    def plot(self):
-        xnodes = [node['position']['x'] for node in self.map['nodes'].values()]
-        ynodes = [node['position']['z'] for node in self.map['nodes'].values()]
-
-        figure = plt.figure()
-        axes = plt.axes(xlim=(1.1 * min(xnodes), 1.1 * max(xnodes)), ylim=(1.1 * min(ynodes), 1.1 * max(ynodes)))
-        plt.xlabel('Longitude')
-        plt.ylabel('Latitude')
-
-        nodes = axes.plot(xnodes, ynodes, 'o', lw=1)[0]
-        agent = axes.plot([], [], 'x', lw=2)[0]
-        plt.show()
 
 
 # region Unit Tests
@@ -74,16 +62,16 @@ class Policeman:
 
 class TestPoliceman(unittest.TestCase):
 
+    @unittest.skipUnless(ETS2.RootGameFolder.exists(), "ETS2 not installed")
+    def test_ets2(self):
+        with ETS2() as ets2:
+            policeman = Policeman(ets2)
+
+
     @unittest.skipUnless(ATS.RootGameFolder.exists(), "ATS not installed")
     def test_ats(self):
         with ATS() as ats:
             policeman = Policeman(ats)
-            pass
 
-    @unittest.skip("For now")
-    def test_plot(self):
-        policeman = Policeman(ATS)
-        policeman.plot()
-        pass
 
 # endregion

@@ -9,9 +9,8 @@ from .env import SimulatorEnv
 class ATSEnv(SimulatorEnv):
     
     def __init__(self, *args, **kwargs):
+        kwargs['simulator'] = ATS()
         super().__init__(*args, **kwargs)
-        self.simulator = ATS()
-        self.simulator.start()
 
 
 # region Unit Tests
