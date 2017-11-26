@@ -1,3 +1,4 @@
+import pickle
 import shutil
 import unittest
 import platform
@@ -12,11 +13,11 @@ from .definition import Definition
 
 
 class Policeman:
-    ExtractorExecutable = Path(__file__).parent / 'bin' / 'scs_extractor.exe'
+    ExtractorExecutable = Path(__file__).parent / 'bin/scs_extractor.exe'
 
     def __init__(self, simulator: Simulator):
         self.simulator = simulator
-        # self.world = self.setup_world(overwrite=False)
+        self.world = self.setup_world(overwrite=False)
         self.map = self.setup_map()
 
     def setup_world(self, overwrite: bool=False) -> Definition:
@@ -40,12 +41,18 @@ class Policeman:
             subprocess.check_call(extract_command, cwd=self.simulator.RootGameFolder)
         extractor.unlink()
 
-        world = Definition(cache_dir / 'def' / 'world', recursive=True)
+        if (cache_dir / 'world.pkl').exists():
+            with open(cache_dir / 'world.pkl', 'rb') as world_pkl:
+                world = pickle.load(world_pkl)
+        else:
+            world = Definition(cache_dir / 'def/world', recursive=True)
+            with open(cache_dir / 'world.pkl', 'wb') as world_pkl:
+                pickle.dump(world, world_pkl)
         return world
 
     def setup_map(self) -> Map:
         """ Open and parse ETS2/ATS text map file """
-        map = Map(self.simulator.mod_dir / 'map' / 'indy500.txt')
+        map = Map(self.simulator.mod_dir / 'map/indy500.txt')
         return map
 
     def plot(self):
@@ -69,12 +76,9 @@ class TestPoliceman(unittest.TestCase):
 
     @unittest.skipUnless(ATS.RootGameFolder.exists(), "ATS not installed")
     def test_ats(self):
-        simulator = ATS()
-        simulator.start()
-        simulator.terminate()
-        policeman = Policeman(simulator)
-        pass
-
+        with ATS() as ats:
+            policeman = Policeman(ats)
+            pass
 
     @unittest.skip("For now")
     def test_plot(self):

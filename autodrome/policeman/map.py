@@ -19,7 +19,8 @@ class MapFile(dict):
             def int(toks: list) -> list:
                 """ Parse ordinary int or big endian hex string as a 8-byte unsigned integer """
                 if toks[0].startswith('x'):
-                    binary = bytes.fromhex(toks[0][1:] + '0')
+                    zeropad = toks[0][1:].ljust(16, '0')
+                    binary = bytes.fromhex(zeropad)
                     toks[0] = struct.unpack('<Q', binary)[0]
                 elif toks[0].startswith('i'):
                     toks[0] = int(toks[0][1:])
@@ -49,6 +50,9 @@ class MapFile(dict):
         floatValue = (Word('&', hexnums) ^ Word('i', '-' + nums)).setParseAction(Parse.float)
         float = Keyword('float') + identifier + Suppress(':') + floatValue
 
+        stringValue = QuotedString('"')
+        string = Keyword('string') + identifier + Suppress(':') + stringValue
+
         fixed2Values = Group(floatValue + floatValue)
         fixed2 = Keyword('fixed2') + identifier + Suppress(':') + fixed2Values
 
@@ -72,7 +76,7 @@ class MapFile(dict):
         arrayStruct = Keyword('array_struct') + identifier + Suppress('[') + arrayStructItems + Suppress(']')
 
         header = Optional(Suppress('SCSAnnotatedFileV1'))
-        entry << Group(int ^ float ^ fixed2 ^ fixed3 ^ float4 ^ quaternion ^ token ^ struct ^ arrayFloat ^ arrayStruct)
+        entry << Group(int ^ float ^ string ^ fixed2 ^ fixed3 ^ float4 ^ quaternion ^ token ^ struct ^ arrayFloat ^ arrayStruct)
 
         file = header + ZeroOrMore(entry)
         file.ignore(pythonStyleComment)
@@ -96,6 +100,7 @@ class MapFile(dict):
         's64': int,
         'token': Reference,
         'float': float,
+        'string': str,
         'fixed2': lambda vals: {'x': vals[0], 'y': vals[1]},
         'fixed3': lambda vals: {'x': vals[0], 'y': vals[1], 'z': vals[2]},
         'float4': tuple,
@@ -174,8 +179,9 @@ class Map(dict):
 
         self.merge(mbd)
         for aux, base, desc in zip(auxs, bases, descs):
+            self.merge(aux)
             self.merge(base)
-        pass
+            self.merge(desc)
 
     def __getattr__(self, item: object) -> object:
         """ Provide nice interface to access the map file entries via dot-notation """
@@ -213,6 +219,7 @@ class TestMapFile(unittest.TestCase):
         u64 node0_uid: x7EC4DD7E7A00000
         token road_look: "look24"
         float right_profile_coef: &3f800000 # 1
+        string override_template: "none"
         fixed3 position: i99088 i-2 i93331 # x:387.063 y:-0.0078125 z:364.574
         quaternion rotation: &bf78fd43 &b8d810bb &3e6e00b0 &b7ce87fd # w:-0.972614 x:-0.000103028 y:0.232424 z:-2.46204e-05
         """
@@ -226,6 +233,7 @@ class TestMapFile(unittest.TestCase):
             ['u64', 'node0_uid', 526114473086],
             ['token', 'road_look', 'look24'],
             ['float', 'right_profile_coef', 1.0],
+            ['string', 'override_template', 'none'],
             ['fixed3', 'position', [387.0625, -0.0078125, 364.57421875]],
             ['quaternion', 'rotation', [-0.9726144671440125, -0.00010302798909833655,
                                         0.23242449760437012, -2.462043812556658e-05]]
@@ -240,6 +248,7 @@ class TestMapFile(unittest.TestCase):
             'node0_uid': 526114473086,
             'road_look': MapFile.Reference('look24'),
             'right_profile_coef': 1.0,
+            'override_template': 'none',
             'position': {'x': 387.0625, 'y': -0.0078125, 'z': 364.57421875},
             'rotation': {'w': -0.9726144671440125, 'x': -0.00010302798909833655,
                          'y': 0.23242449760437012, 'z': -2.462043812556658e-05}
@@ -377,14 +386,6 @@ class TestMapFile(unittest.TestCase):
             ]
         }
         self.assertDictEqual(tree, correctTree)
-
-
-class TestMap(unittest.TestCase):
-
-    def testLoad(self):
-        dir = Path('simulator/mod/map/indy500.txt/')
-        map = Map(dir)
-        pass
 
 
 # endregion

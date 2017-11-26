@@ -54,7 +54,7 @@ class DefinitionFile(dict):
             @staticmethod
             def include(toks):
                 """ Include content of another definition file """
-                raise NotImplementedError
+                pass
 
         identifier = Word(alphanums + '_')
         name = Optional(Suppress('"')) + Word(alphanums + '.' + '_') + Optional(Suppress('"'))
@@ -73,7 +73,7 @@ class DefinitionFile(dict):
         bool = identifier + Suppress(':') + boolValue
         bool.setParseAction(lambda toks: toks.insert(0, 'bool'))
 
-        textValue = QuotedString('"') ^ identifier
+        textValue = QuotedString('"', multiline=True) ^ identifier
         text = identifier + Suppress(':') + textValue
         text.setParseAction(lambda toks: toks.insert(0, 'text'))
 
@@ -128,7 +128,7 @@ class DefinitionFile(dict):
         """ Read a SCS definition (.sii) file and parse it into a hierarchical tree of values, lists & dictionaries """
         super().__init__()
         self.path = path
-        if path is None:
+        if path is None or path.suffixes == ['.custom', '.sii']:
             return
         with path.open('rt') as file:
             try:
@@ -193,7 +193,7 @@ class Definition(dict):
     def __init__(self, directory: Path, recursive=False):
         """ Read a SCS definition files (*.sii) from a directory and merge them into a single in-memory graph """
         super().__init__()
-        siiFiles = directory.glob('**/road_*.sii' if recursive is True else 'road_*.sii')
+        siiFiles = directory.glob('**/*.sii' if recursive is True else '*.sii')
         siiFiles = sorted(siiFiles, key=lambda file: file.stat().st_size, reverse=True)
 
         with Pool() as pool:
@@ -209,11 +209,11 @@ class Definition(dict):
         def merge(this: dict, other: dict):
             for identifier, value in other.items():
                 if identifier in this:
-                    if isinstance(value, dict): # and not isinstance(value, scstypes.Struct):
+                    if isinstance(value, dict):
                         recurse.append(identifier)
                         merge(this[identifier], other[identifier])
                         recurse.pop()
-                    elif isinstance(value, list): #  and not isinstance(value, scstypes.Array):
+                    elif isinstance(value, list):
                         this[identifier].extend(other[identifier])
                     else:
                         message = ("Duplicate found during merging:\n"
