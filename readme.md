@@ -9,7 +9,7 @@ _Autodrome_ is a framework and [OpenAI gym](https://gym.openai.com/) environment
 
 Developing algorithms for self-driving vehicles is not an easy task. Initial excitement about behavioral cloning agents built in an afternoon quickly wears off once it's clear how hard are the corner cases where it doesn't wok. The difficult part is improving the reliability from the afternoon project level of 90% to the near-human level of 99.9999%.
 
-Reaching this level of reliability requires a lot of infrastructure, large datasets and a flexibiltiy to quickly run unit tests and benchmark the performance against a baseline. This is true even for a limited geo-fenced use cases like driving on highways. Goal of the project is to get the basics version of these features running by gluing together pieces that are already available elsewhere. Basic design blocks and key components are shown on the following diagram.
+Reaching this level of reliability requires a lot of infrastructure, large datasets and a flexibility to quickly run unit tests and benchmark the performance against a baseline. This is true even for a limited geo-fenced use cases like driving on highways. Goal of the project is to get the basics version of these features running by gluing together pieces that are already available elsewhere. Basic design blocks and key components are shown on the following diagram.
 
 ![Concept](https://github.com/vojtamolda/autodrome/wiki/Home/Concept.png)
 
@@ -33,7 +33,7 @@ See the [Editor and Maps wiki page](https://github.com/vojtamolda/autodrome/wiki
 
 _Autodrome_ provides a Python API that can be used for a wide variety of purposes for example - data collection, behavioral cloning or reinforcement learning. The API makes it easy to use _Autodrome_ with any machine learning toolchain. One possible way to train an agent capable of driving a vehicle is deep reinforcement learning.
 
-The project exposes a simple RL environment that implements the de-facto standard in RL research - OpenAI Gym API. The agent controls the truck and is rewarded for the travelled distance. Once the truck colliedes with anything the episode terminates.
+The project exposes a simple RL environment that implements the de-facto standard in RL research - OpenAI Gym API. The agent controls the truck and is rewarded for the travelled distance. Once the truck collides with anything the episode terminates.
 
 ![Open AI Gym Demo](https://github.com/vojtamolda/autodrome/wiki/OpenAI-Gym/Gym-Demo.gif)
 
